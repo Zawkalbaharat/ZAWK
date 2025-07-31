@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>طلبات الإجازة - المشرف العام</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #fff; padding: 20px; }
+        h2 { color: #2e7d32; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background-color: white; margin-bottom: 20px; }
+        th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+        .status { font-weight: bold; padding: 6px 12px; border-radius: 6px; display: inline-block; }
+        .status-approved-final { background-color: #006400; color: white; }
+        .status-approved { background-color: #2196F3; color: white; }
+        .status-pending { background-color: #FFEB3B; color: black; }
+        .status-rejected { background-color: #f44336; color: white; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; color: white; cursor: pointer; margin-right: 5px; }
+        .approve { background-color: #2e7d32; }
+        .reject { background-color: #c62828; }
+        .export { background-color: #2196F3; }
+        .print { background-color: #FF9800; }
+        .back { background-color: #777; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <a href="/leave_priority" style="position: absolute; top: 20px; left: 20px;">
+    <button class="btn export" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px;">
+        🏆 أولوية الإجازات / Leave Priority
+    </button>
+</a>
+
+    <a href="/dashboard"><button class="btn back">🔙 العودة للوحة المشرف</button></a>
+    <h2>جميع طلبات الإجازة / All Vacation Requests</h2>
+    <table id="vacationRequestsTable">
+        <thead>
+            <tr>
+                <th>رقم الطلب</th>
+                <th>اسم الموظف</th>
+                <th>رقم الهوية</th>
+                <th>تاريخ البداية</th>
+                <th>تاريخ النهاية</th>
+                <th>تفاصيل</th>
+                <th>تاريخ الطلب</th>
+                <th>تاريخ الموافقة الأولى</th>
+                <th>تاريخ الموافقة الثانية</th>
+                <th>الحالة</th>
+                <th>تاريخ مباشرة العمل</th>
+                <th>حالة المباشرة</th>
+                <th>تم إشعار الموارد</th>
+                <th>إجراء</th>
+                <th>إشعار الموارد</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in requests %}
+            <tr>
+                <td>{{ req['رقم الطلب'] }}</td>
+                <td>{{ req['اسم الموظف'] }}</td>
+                <td>{{ req['رقم الهوية'] }}</td>
+                <td>{{ req['تاريخ البداية'] }}</td>
+                <td>{{ req['تاريخ النهاية'] }}</td>
+                <td>{{ req['تفاصيل'] }}</td>
+                <td>{{ req['تاريخ الطلب'] }}</td>
+                <td>{{ req['تاريخ الموافقة الأولى'] }}</td>
+                <td>{{ req['تاريخ الموافقة الثانية'] }}</td>
+                <td>
+                    <span class="status 
+                        {% if req['الحالة'] == 'مقبول نهائيًا' %}status-approved-final
+                        {% elif req['الحالة'] == 'مقبول' %}status-approved
+                        {% elif req['الحالة'] == 'معلق' %}status-pending
+                        {% elif 'مرفوض' in req['الحالة'] %}status-rejected
+                        {% endif %}">
+                        {{ req['الحالة'] }}
+                    </span>
+                </td>
+                <td>{{ req['تاريخ مباشرة العمل'] or '-' }}</td>
+                <td>{{ req['حالة المباشرة'] or 'معلقة' }}</td>
+                <td>{{ req['تم إشعار الموارد بالمباشرة'] or '-' }}</td>
+                <td>
+                    {% if req['تاريخ مباشرة العمل'] == '' %}
+                    <form method="POST" action="/admin_confirm_return">
+                        <input type="hidden" name="request_id" value="{{ req['رقم الطلب'] }}">
+                        <input type="date" name="return_date" required>
+                        <button type="submit" name="action" value="returned" class="btn approve">✔ مباشرة</button>
+                        <button type="submit" name="action" value="not_returned" class="btn reject" onclick="return confirm('هل أنت متأكد أن الموظف لم يعد؟')">✖ لم يعد</button>
+                    </form>
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if req['تاريخ مباشرة العمل'] and (req['تم إشعار الموارد بالمباشرة'] == '' or req['تم إشعار الموارد بالمباشرة'] == '-' or not req['تم إشعار الموارد بالمباشرة']) %}
+                    <form method="POST" action="/admin_notify_hr">
+                        <input type="hidden" name="request_id" value="{{ req['رقم الطلب'] }}">
+                        <button type="submit" class="btn export">📢 تم إشعار الموارد</button>
+                    </form>
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button class="btn export" onclick="exportTableToExcel('vacationRequestsTable', 'Vacation_Requests')">📁 تصدير Excel</button>
+    <button class="btn print" onclick="window.print()">🖨 طباعة</button>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#vacationRequestsTable').DataTable({
+            "order": [[0, "desc"]],
+            "pageLength": 50,
+            "language": {
+                "search": "🔍 بحث:",
+                "lengthMenu": "عرض _MENU_ طلب لكل صفحة",
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ طلب",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                },
+                "zeroRecords": "لا توجد نتائج",
+                "infoEmpty": "لا يوجد بيانات لعرضها"
+            }
+        });
+    });
+
+    function exportTableToExcel(tableID, filename = '') {
+        var dataType = 'application/vnd.ms-excel';
+        var table = document.getElementById(tableID);
+        var tableHTML = table.outerHTML.replace(/ /g, '%20');
+        filename = filename ? filename + '.xls' : 'data.xls';
+        var downloadLink = document.createElement("a");
+        document.body.appendChild(downloadLink);
+        if (navigator.msSaveOrOpenBlob) {
+            var blob = new Blob(['﻿', tableHTML], { type: dataType });
+            navigator.msSaveOrOpenBlob(blob, filename);
+        } else {
+            downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+            downloadLink.download = filename;
+            downloadLink.click();
+        }
+    }
+</script>
+</body>
+</html>

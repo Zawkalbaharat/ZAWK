@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>موافقات تأجيل الإجازة / Two-Year Leave Decisions</title>
+    <style>
+        body {
+            font-family: "Cairo", sans-serif;
+            background-color: #f9f9f9;
+            padding: 20px;
+        }
+
+        h2 {
+            color: #2e7d32;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e0f2f1;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #2e7d32;
+            color: white;
+            cursor: pointer;
+        }
+
+        .back-btn {
+            background-color: #607d8b;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+{% if session['role'] == 'موارد بشرية' %}
+    <a href="/hr_vacation"><button class="back-btn">🔙 العودة للوحة الموارد / Back to HR Dashboard</button></a>
+{% elif session['role'] == 'مدير' %}
+    <a href="/manager_vacations"><button class="back-btn">🔙 العودة للوحة المدير / Back to Manager Dashboard</button></a>
+{% elif session['role'] == 'مشرف عام' %}
+    <a href="/dashboard"><button class="back-btn">🔙 العودة للوحة المشرف / Back to Admin Dashboard</button></a>
+
+{% endif %}
+
+
+<h2>موافقات تأجيل الإجازة / Two-Year Leave Decisions</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>رقم الهوية / ID</th>
+            <th>الاسم / Name</th>
+            <th>الفرع / Branch</th>
+            <th>عدد أيام الاستحقاق / Eligibility Days</th>
+            <th>القرار / Decision</th>
+            <th>تاريخ الرد / Decision Date</th>
+            <th>إجراء / Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in decisions %}
+        <tr>
+            <td>{{ row['رقم الهوية / ID'] }}</td>
+            <td>{{ row['الاسم / Name'] }}</td>
+            <td>{{ row['الفرع / Branch'] }}</td>
+            <td>{{ row['مدة الاستحقاق / Eligibility Days'] }}</td>
+            <td>{{ row['القرار / Decision'] }}</td>
+            <td>{{ row['تاريخ الرد / Decision Date'] }}</td>
+            <td>
+                {% if row['القرار / Decision'] == 'لا أوافق / I Disagree' and row.get('أُعيد الإرسال؟', '') != 'نعم' %}
+                <form action="/resend_two_year_request" method="POST">
+                    <input type="hidden" name="id_number" value="{{ row['رقم الهوية / ID'] }}">
+                    <input type="hidden" name="branch" value="{{ row['الفرع / Branch'] }}">
+
+                    {% if session['role'] == 'موارد بشرية' %}
+                        <input type="hidden" name="redirect_back" value="hr_dashboard">
+                    {% elif session['role'] == 'مشرف عام' %}
+                        <input type="hidden" name="redirect_back" value="admin_dashboard">
+                    {% else %}
+                       <input type="hidden" name="redirect_back" value="manager_dashboard">
+                    {% endif %}
+
+                    <button type="submit" onclick="return confirm('هل تريد إعادة إرسال الطلب للموظف؟')">
+                        🔄 إعادة الإرسال / Resend
+                    </button>
+                </form>
+
+                {% elif row.get('أُعيد الإرسال؟', '') == 'نعم' %}
+                    <span style="color: green; font-weight: bold;">تمت الإعادة</span>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

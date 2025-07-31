@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<title>إدارة الموظفين / Manage Employees</title>
+<!-- DataTables CSS -->
+<link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet"/>
+<link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" rel="stylesheet"/>
+<style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; direction: rtl; }
+        table { width: 100%; }
+        .btn { padding: 5px 10px; margin: 2px; border: none; cursor: pointer; }
+        .btn-danger { background-color: #d9534f; color: white; }
+        .btn-success { background-color: #5cb85c; color: white; }
+        .btn-info { background-color: #5bc0de; color: white; }
+        h2 { margin-bottom: 20px; }
+        .branch-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #ffe6e6;
+            margin-bottom: 20px;
+            width: 48%;
+            float: left;
+        }
+    </style>
+</head>
+<body>
+<div style="position: fixed; top: 20px; left: 20px; z-index: 9999;">
+<a href="{{ url_for('dashboard') }}" style="text-decoration: none;">
+<button class="btn btn-outline-primary btn-sm d-flex align-items-center shadow-sm" style="border-radius: 30px; padding: 6px 12px; font-size: 13px;">
+      ⬅️ رجوع / Back
+    </button>
+</a>
+</div>
+<h2>👥 إدارة الموظفين / Manage Employees</h2>
+
+{% if session['role'] == 'مشرف عام' %}
+<div class="branch-box">
+<h5>🛠️ تعديل قائمة الفروع / Branch List Editor</h5>
+<form action="/update_branches" method="POST" onsubmit="return confirm('⚠️ تعديل الفروع يؤثر على جميع البيانات، هل أنت متأكد؟')">
+<label>أسماء الفروع (افصل بينها بفاصلة):</label><br/>
+<textarea name="branches" rows="2" style="width: 100%;">{{ current_branches }}</textarea><br/>
+<button class="btn btn-danger mt-2" type="submit">💾 حفظ الفروع</button>
+</form>
+</div>
+{% endif %}
+
+{% if session['role'] != 'مدير' %}
+<!-- زر إضافة -->
+<button class="btn btn-success" onclick="document.getElementById('addModal').style.display='block'">➕ إضافة موظف / Add Employee</button>
+<br/><br/>
+{% endif %}
+
+<table class="display" id="employeeTable">
+<thead>
+<tr>
+<th>رقم الهوية</th>
+<th>الاسم</th>
+<th>البريد</th>
+<th>كلمة المرور</th>
+<th>الدور</th>
+<th>الفرع</th>
+<th>رقم الهاتف</th>
+<th>تاريخ آخر إجازة</th>
+<th>مدة الاستحقاق (بالأيام)</th>
+<th>عدد الطلبات</th>
+<th>آخر تقييم (مجموع النسبة)</th>
+<th>سجل الإضافة/الحذف</th>
+<th>مهنة</th>
+<th>سجل تجاري</th>
+<th>جنسية</th>
+<th>جنس</th>
+<th>تاريخ ميلاد</th>
+<th>رمز الكفالة</th>
+<th>الاجر</th>
+<th>رقم حدود</th>
+<th>تاريخ التحاق</th>
+            {% if session['role'] != 'مدير' %}
+            <th>إجراء</th>
+            {% endif %}
+        </tr>
+</thead>
+<tbody>
+        {% for emp in employees %}
+        <tr>
+<td>{{ emp['رقم الهوية'] }}</td>
+<td>{{ emp['الاسم'] }}</td>
+<td>{{ emp['البريد'] }}</td>
+<td>{{ emp['كلمة المرور'] }}</td>
+<td>{{ emp['الدور'] }}</td>
+<td>{{ emp['الفرع'] }}</td>
+<td>{{ emp['رقم الهاتف'] }}</td>
+<td>{{ emp['تاريخ آخر إجازة'] }}</td>
+<td>{{ emp['مدة الاستحقاق (بالأيام)'] }}</td>
+<td>{{ emp['عدد الطلبات'] }}</td>
+<td>{{ emp['آخر تقييم (مجموع النسبة)'] }}</td>
+<td>{{ emp['سجل الإضافة/الحذف'] }}</td>
+<td>{{ emp['مهنة'] }}</td>
+<td>{{ emp['سجل تجاري'] }}</td>
+<td>{{ emp['جنسية'] }}</td>
+<td>{{ emp['جنس'] }}</td>
+<td>{{ emp['تاريخ ميلاد'] }}</td>
+<td>{{ emp['رمز الكفالة'] }}</td>
+<td>{{ emp['الاجر'] }}</td>
+<td>{{ emp['رقم حدود'] }}</td>
+<td>{{ emp['تاريخ التحاق'] }}</td>
+            {% if session['role'] != 'مدير' %}
+            <td>
+<form action="/delete_employee" method="POST" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+<input name="employee_id" type="hidden" value="{{ emp['رقم الهوية'] }}"/>
+<button class="btn btn-danger">🗑️ حذف</button>
+</form>
+<button class="btn btn-info" onclick="openEditModal({{ loop.index0 }})">✏️ تعديل</button></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<!-- نموذج إضافة موظف -->
+{% if session['role'] != 'مدير' %}
+<div id="addModal" style="display:none; position:fixed; top:10%; left:20%; background:#fff; padding:20px; border:1px solid #ccc;">
+<h3>إضافة موظف جديد</h3>
+<form action="/add_employee" method="POST">
+<label>رقم الهوية:</label><input name="employee_id" required=""/><br/>
+<label>الاسم:</label><input name="employee_name" placeholder="مثال: محمد أحمد - Mohammed Ahmed" required=""/><br/>
+<small style="color: red;">
+          ⚠️ يرجى كتابة الاسم بالعربية والإنجليزية مفصولًا بـ "-" مثل: محمد أحمد - Mohammed Ahmed
+        </small><br/>
+<label>البريد:</label><input name="email"/><br/>
+<label>كلمة المرور:</label><input name="password"/><br/>
+<label>الدور:</label>
+<select name="role">
+<option>موظف</option>
+<option>مدير</option>
+<option>موارد بشرية</option>
+<option>مشرف عام</option>
+</select><br/>
+<label>الفرع:</label>
+<select name="branch">
+            {% for branch in branches %}
+                <option value="{{ branch }}">{{ branch }}</option>
+            {% endfor %}
+        </select><br/>
+<label>رقم الهاتف:</label><input name="phone"/><br/>
+<label>تاريخ آخر إجازة:</label><input type="date" name="last_leave"><br>
+<label>مدة الاستحقاق (بالأيام):</label><input name="entitlement_days"/><br/>
+<label>مهنة:</label><input name="job_title"/><br/>
+<label>سجل تجاري:</label><input name="commercial_record"/><br/>
+<label>جنسية:</label><input name="nationality"/><br/>
+<label>جنس:</label><input name="gender"/><br/>
+<label>تاريخ ميلاد:</label><input type="date" name="birth_date"><br>
+<label>رمز الكفالة:</label><input name="sponsor_code"/><br/>
+<label>الأجر:</label><input name="salary"/><br/>
+<label>رقم حدود:</label><input name="border_number"/><br/>
+<label>تاريخ التحاق:</label><input type="date" name="joining_date"><br>
+<br/>
+<button class="btn btn-success" type="submit">💾 حفظ</button>
+<button class="btn btn-info" onclick="document.getElementById('addModal').style.display='none'" type="button">إلغاء</button>
+</form>
+</div>
+{% endif %}
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#employeeTable').DataTable({
+            dom: 'Blfrtip',
+            buttons: ['excel', 'print'],
+            language: {
+                search: "🔍 بحث:",
+                lengthMenu: "عرض _MENU_ صفوف",
+                info: "عرض _START_ إلى _END_ من أصل _TOTAL_ صف",
+                paginate: { next: "التالي", previous: "السابق" },
+                zeroRecords: "لا توجد نتائج",
+                infoEmpty: "لا توجد سجلات",
+                infoFiltered: "(تمت التصفية من إجمالي _MAX_ صف)",
+                buttons: {
+                    print: "🖨️ طباعة",
+                    excel: "📥 تصدير Excel"
+                }
+            }
+        });
+    });
+</script>
+<!-- نافذة تعديل بيانات موظف -->
+<div id="editModal" style="display:none; position:fixed; top:10%; left:20%; background:#fff; padding:20px; border:1px solid #ccc; max-height:80vh; overflow:auto;">
+<h3>✏️ تعديل بيانات موظف</h3>
+<form action="/update_employee" method="POST">
+<input id="edit_index" name="index" type="hidden"/>
+<label>الاسم:</label><input id="edit_name" name="employee_name"/><br/>
+<label>البريد:</label><input id="edit_email" name="email"/><br/>
+<label>كلمة المرور:</label><input id="edit_password" name="password"/><br/>
+<label>الدور:</label>
+<select id="edit_role" name="role">
+<option>موظف</option>
+<option>مدير</option>
+<option>موارد بشرية</option>
+<option>مشرف عام</option>
+</select><br/>
+<label>الفرع:</label><input id="edit_branch" name="branch"/><br/>
+<label>رقم الهاتف:</label><input id="edit_phone" name="phone"/><br/>
+<label>تاريخ آخر إجازة:</label><input id="edit_last_leave" name="last_leave" type="date"/><br/>
+<label>مدة الاستحقاق (بالأيام):</label><input id="edit_entitlement" name="entitlement_days" type="number"/><br/>
+<label>مهنة:</label><input id="edit_job" name="job_title"/><br/>
+<label>سجل تجاري:</label><input id="edit_cr" name="commercial_record"/><br/>
+<label>جنسية:</label><input id="edit_nationality" name="nationality"/><br/>
+<label>جنس:</label><input id="edit_gender" name="gender"/><br/>
+<label>تاريخ ميلاد:</label><input id="edit_birth" name="birth_date" type="date"/><br/>
+<label>رمز الكفالة:</label><input id="edit_sponsor" name="sponsor_code"/><br/>
+<label>الأجر:</label><input id="edit_salary" name="salary" type="number"/><br/>
+<label>رقم حدود:</label><input id="edit_border" name="border_number"/><br/>
+<label>تاريخ التحاق:</label><input id="edit_join" name="joining_date" type="date"/><br/>
+<br/>
+<button class="btn btn-success" type="submit">💾 حفظ التعديلات</button>
+<button class="btn btn-danger" onclick="document.getElementById('editModal').style.display='none'" type="button">إغلاق</button>
+</form>
+</div>
+<script>
+  const employees = {{ employees | tojson | safe }};
+  function openEditModal(index) {
+    const emp = employees[index];
+    document.getElementById('edit_index').value = index;
+    document.getElementById('edit_name').value = emp['الاسم'];
+    document.getElementById('edit_email').value = emp['البريد'];
+    document.getElementById('edit_password').value = emp['كلمة المرور'];
+    document.getElementById('edit_role').value = emp['الدور'];
+    document.getElementById('edit_branch').value = emp['الفرع'];
+    document.getElementById('edit_phone').value = emp['رقم الهاتف'];
+    document.getElementById('edit_last_leave').value = emp['تاريخ آخر إجازة'];
+    document.getElementById('edit_entitlement').value = emp['مدة الاستحقاق (بالأيام)'];
+    document.getElementById('edit_job').value = emp['مهنة'];
+    document.getElementById('edit_cr').value = emp['سجل تجاري'];
+    document.getElementById('edit_nationality').value = emp['جنسية'];
+    document.getElementById('edit_gender').value = emp['جنس'];
+    document.getElementById('edit_birth').value = emp['تاريخ ميلاد'];
+    document.getElementById('edit_sponsor').value = emp['رمز الكفالة'];
+    document.getElementById('edit_salary').value = emp['الاجر'];
+    document.getElementById('edit_border').value = emp['رقم حدود'];
+    document.getElementById('edit_join').value = emp['تاريخ التحاق'];
+    document.getElementById('editModal').style.display = 'block';
+  }
+</script>
+</body>
+</html>

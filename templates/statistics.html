@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<title>إحصائيات الطلبات</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+        body { font-family: Arial, sans-serif; background: #f8f8f8; padding: 20px; }
+        h2 { text-align: center; color: #2d4832; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #e0ebe4; }
+        .chart { margin-top: 40px; }
+        .export-buttons { margin-top: 20px; text-align: left; }
+        button { padding: 10px 15px; margin-right: 10px; background: #2d4832; color: white; border: none; border-radius: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h2>إحصائيات الطلبات - Statistics Dashboard</h2>
+
+<a href="/full_employee_info" class="btn btn-employee-info">🧾 ملف الموظف الكامل / Full Employee Info</a>
+
+<style>
+.btn-employee-info {
+    background-color: #3949ab;
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+    display: inline-block;
+    margin: 10px 0;
+}
+.btn-employee-info:hover {
+    background-color: #1a237e;
+}
+</style>
+
+
+<div class="export-buttons">
+<button onclick="exportTableToCSV()">تصدير إلى Excel</button>
+<button onclick="window.print()">تصدير إلى PDF</button>
+</div>
+<div style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+<select class="form-control" id="monthFilter" onchange="filterTable()">
+<option value="">اختر شهرًا</option>
+<option value="2025-06">2025-06</option>
+<option value="2025-07">2025-07</option>
+</select>
+<select class="form-control" id="branchFilter" onchange="filterTable()">
+<option value="">كل الفروع</option>
+<option value="الرياض">الرياض</option>
+<option value="جدة">جدة</option>
+</select>
+</div>
+<table id="stats-table">
+<thead>
+<tr>
+  <th>الشهر</th>
+  <th>الفرع</th>
+  <th>عدد الإجازات</th>
+  <th>عدد الاستئذانات</th>
+  <th>عدد الساعات الإضافية</th>
+  <th>عدد الخصومات</th>
+  <th>متوسط الخصم (ريال)</th>
+  <th>إجمالي الخصومات (ريال)</th>
+</tr>
+</thead>
+<tbody>
+{% for row in stats %}
+<tr>
+  <td>{{ row['الشهر'] }}</td>
+  <td>{{ row['الفرع'] }}</td>
+  <td>{{ row['إجازة'] }}</td>
+  <td>{{ row['استئذان'] }}</td>
+  <td>{{ row['ساعات إضافية'] }}</td>
+  <td>{{ row['خصم'] }}</td>
+  <td>{{ row['متوسط الخصم (ريال)'] }}</td>
+  <td>{{ row['إجمالي الخصومات (ريال)'] }}</td>
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+<div class="chart" id="bar-chart"></div>
+<script>
+    var data = [
+        {"branch": "الرياض", "month": "2025-06", "leaves": 2, "permissions": 3, "extra_hours": 12, "deductions": 2},
+        {"branch": "جدة", "month": "2025-06", "leaves": 1, "permissions": 1, "extra_hours": 6, "deductions": 1},
+        {"branch": "الرياض", "month": "2025-07", "leaves": 4, "permissions": 2, "extra_hours": 10, "deductions": 3}
+    ];
+
+    const traceLeaves = {
+        x: data.map(r => r.branch + " - " + r.month),
+        y: data.map(r => r.leaves),
+        name: 'إجازات',
+        type: 'bar'
+    };
+
+    const tracePerms = {
+        x: data.map(r => r.branch + " - " + r.month),
+        y: data.map(r => r.permissions),
+        name: 'استئذانات',
+        type: 'bar'
+    };
+
+    const traceHours = {
+        x: data.map(r => r.branch + " - " + r.month),
+        y: data.map(r => r.extra_hours),
+        name: 'ساعات إضافية',
+        type: 'bar'
+    };
+
+    const traceDeductions = {
+        x: data.map(r => r.branch + " - " + r.month),
+        y: data.map(r => r.deductions),
+        name: 'خصومات',
+        type: 'bar'
+    };
+
+    const layout = {
+        barmode: 'group',
+        title: 'مقارنة الفروع حسب نوع الطلب',
+        xaxis: { title: 'الفرع - الشهر' },
+        yaxis: { title: 'العدد / الساعات' }
+    };
+
+    Plotly.newPlot('bar-chart', [traceLeaves, tracePerms, traceHours, traceDeductions], layout);
+
+    function exportTableToCSV() {
+        const table = document.getElementById("stats-table");
+        let csv = "";
+        for (let row of table.rows) {
+            let cells = [...row.cells].map(cell => `"${cell.innerText}"`);
+            csv += cells.join(",") + "\n";
+        }
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "statistics.csv";
+        a.click();
+    }
+
+    function filterTable() {
+        var month = document.getElementById('monthFilter').value;
+        var branch = document.getElementById('branchFilter').value;
+        var table = document.getElementById("stats-table");
+        var rows = table.querySelectorAll("tbody tr");
+
+        rows.forEach(function(row) {
+            var rowMonth = row.cells[0].innerText;
+            var rowBranch = row.cells[1].innerText;
+            var show = true;
+            if (month && rowMonth !== month) show = false;
+            if (branch && rowBranch !== branch) show = false;
+            row.style.display = show ? "" : "none";
+        });
+    }
+</script>
+
+<h3>إجمالي الخصومات لكل فرع</h3>
+<table border="1">
+<thead>
+<tr>
+<th>الفرع</th>
+<th>إجمالي الخصومات (ريال)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>الرياض</td>
+<td>500.0</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

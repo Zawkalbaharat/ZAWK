@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>📅 سجل حضور الموظفين</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 30px; background-color: #f9f9f9; }
+        h2 { color: #2e7d32; text-align: center; }
+        .upload-box { margin-bottom: 20px; text-align: center; }
+        table { width: 100%; }
+        .flash { color: red; text-align: center; margin: 10px; }
+    </style>
+</head>
+<body>
+
+   <div class="header">
+  <button onclick="window.location.href='/dashboard'" class="back-button">
+    🔙 رجوع إلى لوحة التحكم / Back to Dashboard
+  </button>
+</div>
+<style>
+.back-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #3498db;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+.back-button:hover {
+    background: #2980b9;
+}
+</style>
+
+
+<div class="upload-box">
+    <form method="POST" action="/upload_attendance" enctype="multipart/form-data">
+        <label>📤 رفع ملف Excel:</label>
+        <input type="file" name="file" required>
+        <button type="submit">رفع</button>
+    </form>
+    <br>
+    <a href="/download_bulk_template" class="btn-template" download>📥 تحميل نموذج Excel لتعبئة الحضور الجماعي</a>
+</div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash">{{ messages[0] }}</div>
+        {% endif %}
+    {% endwith %}
+
+<form method="get" action="/attendance" style="margin-bottom: 20px;">
+  <label>📅 الشهر:</label>
+  <select name="month" onchange="this.form.submit()">
+    <option value="">-- كل الشهور --</option>
+    {% for month in all_months %}
+    <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}</option>
+    {% endfor %}
+  </select>
+
+  <label style="margin-right: 20px;">🏢 الفرع:</label>
+  <select name="branch" onchange="this.form.submit()">
+    <option value="">-- كل الفروع --</option>
+    {% for branch in all_branches %}
+    <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>{{ branch }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+    <table id="attendanceTable" class="display">
+        <thead>
+            <tr>
+                <th>رقم الهوية</th>
+                <th>زمن الحضور</th>
+                <th>زمن الانصراف</th>
+                <th>ساعات دوام فترة العمل</th>
+                <th>ساعات عمل الموظف</th>
+                <th>غياب</th>
+                <th>تأخير</th>
+                <th>إجمالي استقطاع</th>
+                <th>ملاحظات</th>
+                <th>الشهر</th>
+                <th>الفرع</th>
+                <th>حذف</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+            <tr>
+                <td>{{ row["رقم الهوية"] }}</td>
+                <td>{{ row["زمن الحضور"] }}</td>
+                <td>{{ row["زمن الانصراف"] }}</td>
+                <td>{{ row["ساعات دوام فترة العمل"] }}</td>
+                <td>{{ row["ساعات عمل الموظف"] }}</td>
+                <td>{{ row["غياب"] }}</td>
+                <td>{{ row["تأخير"] }}</td>
+                <td>{{ row["إجمالي استقطاع"] }}</td>
+                <td>{{ row["ملاحظات"] }}</td>
+                <td>{{ row["الشهر"] }}</td>
+                <td>{{ row["الفرع"] }}</td>
+                <td>
+  <form method="POST" action="/delete_attendance" onsubmit="return confirm('هل أنت متأكد من حذف هذا السجل؟');">
+      <input type="hidden" name="رقم الهوية" value="{{ row['رقم الهوية'] }}">
+      <input type="hidden" name="الشهر" value="{{ row['الشهر'] }}">
+      <button type="submit" style="color:red;">🗑️ حذف</button>
+  </form>
+</td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr>
+   <h3>📊 إحصائيات الفروع (حسب الشهر المختار)</h3>
+<table border="1" style="border-collapse: collapse; width: 100%; text-align: center;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th>الفرع</th>
+      <th>عدد الموظفين</th>
+      <th>مجموع الغياب</th>
+      <th>ساعات التأخير</th>
+      <th>إجمالي الاستقطاع</th>
+      <th>معدل ساعات العمل</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for stat in grouped_stats %}
+    <tr>
+      <td>{{ stat["الفرع"] }}</td>
+      <td>{{ stat["عدد الموظفين"] }}</td>
+      <td>{{ stat["مجموع الغياب"] }}</td>
+      <td>{{ stat["ساعات التأخير"] }}</td>
+      <td>{{ stat["إجمالي الاستقطاع"] }}</td>
+      <td>{{ stat["معدل ساعات العمل"] }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+
+
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#attendanceTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json"
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

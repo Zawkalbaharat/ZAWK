@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>طلبات الإجازة - المدير</title>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #fff;
+            padding: 20px;
+        }
+        h2 {
+            color: #2e7d32;
+        }
+        .tab {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-left: 10px;
+            background-color: #f1f1f1;
+            cursor: pointer;
+            border-radius: 10px 10px 0 0;
+            font-weight: bold;
+        }
+        .tab.active {
+            background-color: #2e7d32;
+            color: white;
+        }
+        .tab-content {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 0 10px 10px 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #aaa;
+            padding: 10px;
+            text-align: center;
+        }
+        form {
+            display: inline;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 2px;
+        }
+    </style>
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content-section').forEach(c => c.style.display = 'none');
+            document.getElementById(tabId).style.display = 'block';
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+        window.onload = function () {
+            showTab('pending');
+        };
+    </script>
+</head>
+<body>
+    <a href="/leave_priority" style="position: absolute; top: 20px; left: 20px;">
+    <button class="btn export" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px;">
+        🏆 أولوية الإجازات / Leave Priority
+    </button>
+</a>
+
+    <h2>طلبات الإجازة - {{ name }}</h2>
+
+    <div>
+        <div id="tab-pending" class="tab" onclick="showTab('pending')">🔔 طلبات بحاجة لتأكيد مباشرة</div>
+        <div id="tab-confirmed" class="tab" onclick="showTab('confirmed')">📄 طلبات تم تأكيد مباشرتها</div>
+    </div>
+
+    <div class="tab-content">
+        <!-- ✅ تبويب الطلبات المعلقة -->
+        <div id="pending" class="tab-content-section">
+            <h3>طلبات الإجازة المعلقة على المباشرة</h3>
+            {% if vacation_pending %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>اسم الموظف</th>
+                        <th>تاريخ البداية</th>
+                        <th>تاريخ النهاية</th>
+                        <th>الحالة</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in vacation_pending %}
+                    <tr>
+                        <td>{{ row['رقم الطلب'] }}</td>
+                        <td>{{ row['اسم الموظف'] }}</td>
+                        <td>{{ row['تاريخ البداية'] }}</td>
+                        <td>{{ row['تاريخ النهاية'] }}</td>
+                        <td>{{ row['الحالة'] }}</td>
+                        <td>
+                            <form method="POST" action="/confirm_return">
+                                <input type="hidden" name="request_id" value="{{ row['رقم الطلب'] }}">
+                                <input type="date" name="return_date" required>
+                                <button type="submit" name="action" value="returned">✔ مباشرة العمل</button>
+                                <button type="submit" name="action" value="not_returned" onclick="return confirm('هل أنت متأكد أن الموظف لم يعد؟')">✖ لم يعد</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>لا توجد طلبات معلقة على المباشرة حالياً.</p>
+            {% endif %}
+        </div>
+
+        <!-- ✅ تبويب الطلبات المؤكدة -->
+        <div id="confirmed" class="tab-content-section" style="display: none;">
+            <h3>طلبات تم تأكيد مباشرتها</h3>
+            {% if vacation_confirmed %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>اسم الموظف</th>
+                        <th>تاريخ البداية</th>
+                        <th>تاريخ النهاية</th>
+                        <th>تاريخ مباشرة العمل</th>
+                        <th>حالة المباشرة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in vacation_confirmed %}
+                    <tr>
+                        <td>{{ row['رقم الطلب'] }}</td>
+                        <td>{{ row['اسم الموظف'] }}</td>
+                        <td>{{ row['تاريخ البداية'] }}</td>
+                        <td>{{ row['تاريخ النهاية'] }}</td>
+                        <td>{{ row['تاريخ مباشرة العمل'] }}</td>
+                        <td>{{ row['حالة المباشرة'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>لا توجد طلبات مؤكدة حالياً.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <br>
+    <a href="/dashboard">🔙 العودة للوحة المدير</a>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>🧾 ملف الموظف الكامل / Full Employee Info</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+            background-color: #f7f7f7;
+            margin: 30px;
+        }
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        form {
+            margin: 20px 0;
+            text-align: center;
+        }
+        select, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .section {
+            background-color: #ffffff;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #2980b9;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🧾 ملف الموظف الكامل / Full Employee Info</h2>
+
+    <form method="POST">
+    <label for="branch">🏢 اختر الفرع / Select Branch:</label>
+    <select name="branch" id="branch" required onchange="this.form.submit()">
+        <option value="">-- اختر الفرع / Select Branch --</option>
+        {% for b in branches %}
+            <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
+        {% endfor %}
+    </select>
+
+    {% if selected_branch %}
+        <br><br>
+        <label for="employee_id">👤 اختر موظفًا / Select Employee:</label>
+        <select name="employee_id" id="employee_id" required>
+            <option value="">-- اختر الموظف / Select Employee --</option>
+            {% for _, row in employees.iterrows() %}
+                <option value="{{ row['رقم الهوية'] }}" {% if selected_id == row['رقم الهوية'] %}selected{% endif %}>
+                    {{ row['الاسم'] }} - {{ row['رقم الهوية'] }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">عرض / View</button>
+    {% endif %}
+</form>
+{% if data %}
+    <div style="text-align: center; margin-bottom: 20px;">
+        <button onclick="window.print()">🖨️ طباعة / Print</button>
+        <button onclick="exportTableToExcel()">📥 تصدير إلى Excel / Export to Excel</button>
+    </div>
+{% endif %}
+
+
+    {% if data %}
+        <div class="section">
+            <h3>👤 المعلومات الشخصية / Personal Info</h3>
+            <table>
+                <tr>
+                    {% for col in data.employee.columns %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+                {% for _, row in data.employee.iterrows() %}
+                    <tr>
+                        {% for col in data.employee.columns %}
+                            <td>{{ row[col] }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        {% set sections = {
+            'requests': '📄 الطلبات / Requests',
+            'evaluations': '📊 التقييمات / Evaluations',
+            'attendance': '📅 الحضور / Attendance',
+            'status': '📌 حالة الموظف / Status'
+} %}
+
+
+        {% for key, title in sections.items() %}
+            {% if data[key] is not none and not data[key].empty %}
+                <div class="section">
+                    <h3>{{ title }}</h3>
+                    <table>
+                        <tr>
+                            {% for col in data[key].columns %}
+                                <th>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                        {% for _, row in data[key].iterrows() %}
+                            <tr>
+                                {% for col in data[key].columns %}
+                                    <td>{{ row[col] }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+</body>
+<script>
+function exportTableToExcel() {
+    let tables = document.querySelectorAll("table");
+    let allHtml = "";
+    tables.forEach((table, index) => {
+        allHtml += "<h3>Table " + (index + 1) + "</h3>";
+        allHtml += table.outerHTML + "<br><br>";
+    });
+
+    let blob = new Blob([allHtml], { type: "application/vnd.ms-excel" });
+    let url = window.URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "employee_info.xls";
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+
+</html>

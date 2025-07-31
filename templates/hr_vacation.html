@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة مباشرة الإجازات / Vacation Return Management</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        h2 {
+            color: #2e7d32;
+            margin-bottom: 20px;
+        }
+        .tab {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        .back-btn {
+            margin-bottom: 15px;
+        }
+        .back-btn button {
+            padding: 8px 20px;
+            background-color: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .badge {
+            background-color: red;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            margin-right: 8px;
+        }
+        .export, .print {
+            padding: 8px 16px;
+            margin: 10px 10px 20px 0;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+        .export { background-color: #2196F3; }
+        .print  { background-color: #FF9800; }
+    </style>
+</head>
+<body>
+<a href="/leave_priority" style="position: absolute; top: 20px; left: 20px;">
+    <button class="btn export" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px;">
+        🏆 أولوية الإجازات / Leave Priority
+    </button>
+</a>
+<div class="back-btn">
+    <a href="/hr_dashboard"><button>🔙 العودة إلى لوحة الموارد / Back to HR Dashboard</button></a>
+</div>
+
+<h2>طلبات مباشرة الإجازة / Vacation Return Requests</h2>
+
+<div class="tab">
+    <h3>الطلبات المعلقة / Pending Requests <span class="badge" id="pending-count">0</span></h3>
+    <table id="pending-table">
+        <thead>
+            <tr>
+                <th>رقم الهوية / ID</th>
+                <th>اسم الموظف / Name</th>
+                <th>نوع الطلب / Type</th>
+                <th>تاريخ البداية / Start Date</th>
+                <th>تاريخ النهاية / End Date</th>
+                <th>تاريخ مباشرة العمل / Return Date</th>
+                <th>حالة المباشرة / Return Status</th>
+                <th>إشعار الموارد / Notify HR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pending %}
+            <tr>
+                <td>{{ row["رقم الهوية"] }}</td>
+                <td>{{ row["اسم الموظف"] }}</td>
+                <td>{{ row["نوع الطلب"] }}</td>
+                <td>{{ row["تاريخ البداية"] }}</td>
+                <td>{{ row["تاريخ النهاية"] }}</td>
+                <td>{{ row["تاريخ مباشرة العمل"] or "-" }}</td>
+                <td>{{ row["حالة المباشرة"] or "-" }}</td>
+                <td>
+                    <form method="post" action="/hr_notify_return">
+                        <input type="hidden" name="request_id" value="{{ row['رقم الطلب'] }}">
+                        <button type="submit">📩 تم إشعار الموارد</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button class="export" onclick="exportTableToExcel('pending-table', 'Vacation_Pending')">📁 تصدير Excel</button>
+    <button class="print" onclick="window.print()">🖨 طباعة</button>
+</div>
+
+<div class="tab">
+    <h3>الطلبات المنتهية / Completed Notifications</h3>
+    <table id="done-table">
+        <thead>
+            <tr>
+                <th>رقم الهوية / ID</th>
+                <th>اسم الموظف / Name</th>
+                <th>نوع الطلب / Type</th>
+                <th>تاريخ البداية / Start Date</th>
+                <th>تاريخ النهاية / End Date</th>
+                <th>تاريخ مباشرة العمل / Return Date</th>
+                <th>تم إشعار الموارد / HR Notified</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in completed %}
+            <tr>
+                <td>{{ row["رقم الهوية"] }}</td>
+                <td>{{ row["اسم الموظف"] }}</td>
+                <td>{{ row["نوع الطلب"] }}</td>
+                <td>{{ row["تاريخ البداية"] }}</td>
+                <td>{{ row["تاريخ النهاية"] }}</td>
+                <td>{{ row["تاريخ مباشرة العمل"] or "-" }}</td>
+                <td>{{ row["تم إشعار الموارد بالمباشرة"] or "-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button class="export" onclick="exportTableToExcel('done-table', 'Vacation_Completed')">📁 تصدير Excel</button>
+    <button class="print" onclick="window.print()">🖨 طباعة</button>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#pending-table').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json"
+            }
+        });
+        $('#done-table').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json"
+            }
+        });
+
+        // عدّاد الطلبات المعلقة
+        document.getElementById("pending-count").innerText = $('#pending-table tbody tr').length;
+    });
+
+    function exportTableToExcel(tableID, filename = '') {
+        var dataType = 'application/vnd.ms-excel';
+        var table = document.getElementById(tableID);
+        var tableHTML = table.outerHTML.replace(/ /g, '%20');
+        filename = filename ? filename + '.xls' : 'data.xls';
+
+        var downloadLink = document.createElement("a");
+        document.body.appendChild(downloadLink);
+
+        if (navigator.msSaveOrOpenBlob) {
+            var blob = new Blob(['﻿', tableHTML], { type: dataType });
+            navigator.msSaveOrOpenBlob(blob, filename);
+        } else {
+            downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+            downloadLink.download = filename;
+            downloadLink.click();
+        }
+    }
+</script>
+
+</body>
+</html>

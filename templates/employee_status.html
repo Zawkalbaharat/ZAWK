@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>📋 حالة الموظفين / Employee Status</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 30px; background-color: #f9f9f9; }
+        h2 { color: #2e7d32; text-align: center; margin-bottom: 20px; }
+        .btn { padding: 5px 10px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-info { background-color: #2196f3; color: white; }
+        .btn-success { background-color: #4caf50; color: white; }
+        .stat-box { display: inline-block; padding: 10px 20px; background: #f5f5f5; border: 1px solid #ccc; margin: 5px; border-radius: 10px; }
+        .editable { background-color: #fffbe6; }
+        .red-cell { background-color: #ffe6e6 !important; }
+        table.dataTable thead th { background-color: #2e7d32; color: white; }
+        .dt-buttons button { margin-left: 5px; }
+    
+.custom-select {
+    padding: 6px 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.45rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+    width: 100%;
+    min-width: 100px;
+}
+.custom-select:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+</style>
+</head>
+<body>
+
+<h2>📋 حالة الموظفين / Employee Status</h2>
+<div style="text-align: left; margin-bottom: 20px;">
+  <a href="{{ 'hr_dashboard' if role == 'موارد بشرية' else 'admin_dashboard' if role == 'مشرف عام' else '#' }}" class="btn btn-info">🔙 رجوع إلى لوحة التحكم</a>
+</div>
+
+<div id="statistics"></div>
+<table id="statusTable" class="display" style="width:100%">
+    <thead></thead>
+    <tbody></tbody>
+</table>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+<script>
+function calculateSmartColumns(row) {
+    const today = new Date();
+    function daysUntil(dateStr) {
+        if (!dateStr || typeof dateStr !== "string") return Infinity;
+        const date = new Date(dateStr);
+        return isNaN(date) ? Infinity : Math.ceil((date - today) / (1000 * 60 * 60 * 24));
+    }
+
+    if (row["هل ترك العمل؟"] === "نعم") {
+        Object.keys(row).forEach(k => {
+            if (k.startsWith("هل يحتاج")) row[k] = "لا";
+        });
+        row["هل رُفع من المنصات؟"] = row["هل رُفع من المنصات؟"] || "لا";
+        row["هل رُفع من التأمين؟"] = row["هل رُفع من التأمين؟"] || "لا";
+    } else {
+        row["هل يحتاج تجديد الإقامة؟"] =
+            ["2", "3"].includes(String(row["رمز الكفالة"]).trim()) &&
+            daysUntil(row["تاريخ انتهاء الإقامة"]) < 50 ? "نعم" : "لا";
+        row["هل يحتاج تجديد البطاقة؟"] =
+            String(row["هل يستحق البطاقة؟"]).trim() === "نعم" &&
+            daysUntil(row["تاريخ انتهاء البطاقة الصحية"]) < 30 ? "نعم" : "لا";
+        row["هل يحتاج تجديد التأمين؟"] =
+            String(row["هل يستحق التأمين؟"]).trim() === "نعم" &&
+            daysUntil(row["تاريخ انتهاء التأمين"]) < 30 ? "نعم" : "لا";
+        row["هل يحتاج تجديد العقد؟"] =
+            daysUntil(row["تاريخ انتهاء العقد"]) < 90 ? "نعم" : "لا";
+        row["هل رُفع من المنصات؟"] = "";
+        row["هل رُفع من التأمين؟"] = "";
+    }
+    return row;
+}
+
+let tableData = [];
+let table;
+
+const dateFields = [
+    "تاريخ انتهاء الإقامة", "تاريخ انتهاء البطاقة الصحية",
+    "تاريخ انتهاء التأمين", "تاريخ انتهاء العقد"
+];
+
+const dropdownFields = {
+    "هل يستحق البطاقة؟": ["", "نعم", "لا"],
+    "هل يستحق التأمين؟": ["", "نعم", "لا"],
+    "هل ترك العمل؟": ["", "نعم", "لا"],
+    "هل رُفع من المنصات؟": ["", "نعم", "لا"],
+    "هل رُفع من التأمين؟": ["", "نعم", "لا"]
+};
+
+const alwaysEditable = [
+    "تاريخ انتهاء الإقامة", "هل يستحق البطاقة؟", "تاريخ انتهاء البطاقة الصحية",
+    "هل يستحق التأمين؟", "تاريخ انتهاء التأمين", "تاريخ انتهاء العقد",
+    "ملاحظات عامة", "هل ترك العمل؟"
+];
+
+function isEditable(column, rowData) {
+    if (["هل رُفع من المنصات؟", "هل رُفع من التأمين؟"].includes(column)) {
+        return rowData["هل ترك العمل؟"] === "نعم";
+    }
+    return alwaysEditable.includes(column);
+}
+
+function createStatistics(data) {
+    const statsContainer = document.getElementById("statistics");
+    statsContainer.innerHTML = "";
+
+    const fields = [
+        "هل يحتاج تجديد الإقامة؟", "هل يحتاج تجديد البطاقة؟",
+        "هل يحتاج تجديد التأمين؟", "هل يحتاج تجديد العقد؟",
+        "هل ترك العمل؟", "هل رُفع من المنصات؟", "هل رُفع من التأمين؟"
+    ];
+
+    fields.forEach(field => {
+        let count = 0;
+        if (field === "هل رُفع من المنصات؟" || field === "هل رُفع من التأمين؟") {
+            count = data.filter(row => row[field] === "لا").length;
+        } else {
+            count = data.filter(row => row[field] === "نعم").length;
+        }
+        const box = `<div class='stat-box'><strong>${field}</strong>: ${count}</div>`;
+        statsContainer.innerHTML += box;
+    });
+}
+
+function buildTable(data) {
+    data = data.map(calculateSmartColumns);
+
+    // كائن يحوي أحدث تاريخ بداية إجازة لكل رقم هوية
+    const latestLeaveDates = {
+        "2020202020": "2025-07-15",
+        "66665556677": "2025-07-15"
+        // ← أضف المزيد من القيم تلقائيًا عبر بايثون أو JSON من السيرفر
+    };
+
+    const allowedColumns = [
+        "رقم الهوية", "الاسم", "الفرع", "الدور", "رمز الكفالة", "سجل تجاري",
+        "تاريخ بداية الإجازة", // ← العمود الجديد هنا
+        "تاريخ انتهاء الإقامة", "هل يستحق البطاقة؟", "تاريخ انتهاء البطاقة الصحية",
+        "هل يستحق التأمين؟", "تاريخ انتهاء التأمين",
+        "تاريخ انتهاء العقد", "ملاحظات عامة", "هل ترك العمل؟",
+        "هل يحتاج تجديد الإقامة؟", "هل يحتاج تجديد البطاقة؟",
+        "هل يحتاج تجديد التأمين؟", "هل يحتاج تجديد العقد؟",
+        "هل رُفع من المنصات؟", "هل رُفع من التأمين؟"
+    ];
+
+    const filteredData = data.map(row => {
+        const filteredRow = {};
+        allowedColumns.forEach(col => filteredRow[col] = row[col] ?? "");
+
+        // إضافة تاريخ بداية الإجازة من الكائن حسب رقم الهوية
+        const id = String(row["رقم الهوية"]).trim();
+        filteredRow["تاريخ بداية الإجازة"] = latestLeaveDates[id] || "";
+
+        if (!filteredRow["هل ترك العمل؟"]) filteredRow["هل ترك العمل؟"] = "لا";
+        return filteredRow;
+    });
+
+    const columns = allowedColumns.map(col => ({ title: col, data: col }));
+
+    table = $('#statusTable').DataTable({
+        data: filteredData,
+        columns: columns,
+        dom: 'Bfrtip',
+        buttons: ['excelHtml5', 'print'],
+        paging: true,
+        responsive: true,
+        destroy: true,
+        createdRow: function (row, rowData) {
+            for (let key in rowData) {
+                if (rowData[key] === "نعم" && key.includes("يحتاج")) {
+                    $('td', row).eq(Object.keys(rowData).indexOf(key)).addClass('red-cell');
+                }
+                if (rowData["هل ترك العمل؟"] === "نعم" &&
+                    rowData[key] === "لا" &&
+                    (key === "هل رُفع من المنصات؟" || key === "هل رُفع من التأمين؟")) {
+                    $('td', row).eq(Object.keys(rowData).indexOf(key)).addClass('red-cell');
+                }
+            }
+        }
+    });
+
+    createStatistics(filteredData);
+}
+
+$(document).ready(function() {
+    const rawData = {{ data | tojson | safe }};
+    const role = "{{ role }}";
+    tableData = rawData.map(row => {
+        if (!row["هل يستحق التأمين؟"]) row["هل يستحق التأمين؟"] = "نعم";
+        if (!row["هل يستحق البطاقة؟"]) row["هل يستحق البطاقة؟"] = "نعم";
+        return row;
+    });
+    if (tableData.length > 0) buildTable(tableData);
+
+    if (["موارد بشرية", "مشرف عام"].includes(role)) {
+        $('#statusTable tbody').on('click', 'td', function () {
+            const colIndex = $(this).index();
+            const rowIndex = table.row($(this).closest('tr')).index();
+            const column = table.settings().init().columns[colIndex].title;
+            const rowData = table.row($(this).closest('tr')).data();
+            if (!isEditable(column, rowData)) return;
+            const currentValue = table.cell(this).data();
+
+            function updateAndRecalc(value) {
+                table.cell(rowIndex, colIndex).data(value).draw(false);
+                let rowData = table.row(rowIndex).data();
+                if (column === "هل ترك العمل؟") {
+                    if (value === "نعم") {
+                        Object.keys(rowData).forEach(k => {
+                            if (k.startsWith("هل يحتاج")) rowData[k] = "لا";
+                        });
+                        rowData["هل رُفع من المنصات؟"] = "لا";
+                        rowData["هل رُفع من التأمين؟"] = "لا";
+                    } else {
+                        rowData = calculateSmartColumns(rowData);
+                        rowData["هل رُفع من المنصات؟"] = "";
+                        rowData["هل رُفع من التأمين؟"] = "";
+                    }
+                } else {
+                    rowData = calculateSmartColumns(rowData);
+                }
+                table.row(rowIndex).data(rowData).draw(false);
+            }
+
+            if (dropdownFields[column]) {
+                const select = $('<select class="custom-select"></select>');
+                dropdownFields[column].forEach(opt => {
+                    select.append(`<option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>`);
+                });
+                $(this).html(select);
+                select.focus().on('change blur', function () {
+                    updateAndRecalc($(this).val());
+                });
+            } else if (dateFields.includes(column)) {
+                const input = $('<input type="text" class="datepicker" autocomplete="off"/>');
+                input.val(currentValue && currentValue !== 'NaN' ? currentValue : '');
+                $(this).empty().append(input);
+                input.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    showButtonPanel: true,
+                    onClose: function () {
+                        updateAndRecalc($(this).val());
+                    }
+                });
+                input.focus();
+            } else {
+                const input = $('<input type="text" />');
+                input.val(currentValue);
+                $(this).html(input);
+                input.focus().on('blur', function () {
+                    updateAndRecalc($(this).val());
+                });
+            }
+        });
+
+        const saveButton = $('<button class="btn btn-success">💾 حفظ التعديلات</button>');
+        saveButton.on('click', function () {
+            const updatedData = table.rows().data().toArray();
+            $.ajax({
+                url: "/update_employee_status",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(updatedData),
+                success: function () {
+                    alert("✅ تم حفظ التعديلات بنجاح");
+                },
+                error: function () {
+                    alert("حدث خطأ أثناء الحفظ");
+                }
+            });
+        });
+        $("#statistics").append(saveButton);
+    }
+});
+</script>
+<!-- تنسيق النص ليكون في الوسط -->
+<style>
+    #branchStats td, #branchStats th {
+        text-align: center;
+    }
+    #branchStats tfoot td {
+        font-weight: bold;
+        background: #f1f1f1;
+    }
+</style>
+
+<h3 style="margin-top:40px; text-align:center; color:#2e7d32;">إحصائيات الفروع / Branch Statistics</h3>
+<table id="branchStats" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th>الفرع</th>
+            <th>ترك العمل</th>
+            <th>لم يترك العمل</th>
+            <th>الإجمالي</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+        <tr>
+            <td>الإجمالي</td>
+            <td id="totalLeft">0</td>
+            <td id="totalStayed">0</td>
+            <td id="totalAll">0</td>
+        </tr>
+    </tfoot>
+</table>
+
+<script>
+function buildBranchStats(data){
+    const branchMap = {};
+    let totalLeft = 0, totalStayed = 0, totalAll = 0;
+
+    data.forEach(row=>{
+        const branch = row["الفرع"] || "غير محدد";
+        if(!branchMap[branch]) branchMap[branch] = { left:0, stayed:0, total:0 };
+        if(row["هل ترك العمل؟"] === "نعم") branchMap[branch].left++;
+        else branchMap[branch].stayed++;
+        branchMap[branch].total++;
+        // حساب الإجمالي العام
+        totalLeft += (row["هل ترك العمل؟"] === "نعم") ? 1 : 0;
+        totalStayed += (row["هل ترك العمل؟"] !== "نعم") ? 1 : 0;
+        totalAll++;
+    });
+
+    const stats = Object.keys(branchMap).map(branch=>({
+        branch: branch,
+        left: branchMap[branch].left,
+        stayed: branchMap[branch].stayed,
+        total: branchMap[branch].total
+    }));
+
+    // تعبئة الإجمالي
+    document.getElementById("totalLeft").textContent = totalLeft;
+    document.getElementById("totalStayed").textContent = totalStayed;
+    document.getElementById("totalAll").textContent = totalAll;
+
+    $('#branchStats').DataTable({
+        data: stats,
+        columns: [
+            { data: 'branch' },
+            { data: 'left' },
+            { data: 'stayed' },
+            { data: 'total' }
+        ],
+        dom: 'Bfrtip',
+        buttons: ['excelHtml5','print'],
+        paging: false,
+        searching: false,
+        info: false,
+        destroy: true
+    });
+}
+
+// بعد تحميل الجدول الأساسي
+$(document).ready(function(){
+    if(tableData.length>0){
+        buildBranchStats(tableData);
+    }
+});
+</script>
+
+</body>
+</html>

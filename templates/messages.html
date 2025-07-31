@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<title>📨 الرسائل / Messages</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .non-employee {
+            background-color: #fff3cd !important;
+        }
+        .unread {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+<div class="mb-3">
+<a class="btn btn-success" href="{{ return_url }}">⬅️ العودة للوحة التحكم / Back to Dashboard</a>
+</div>
+<h2 class="text-center text-success mb-4">📨 الرسائل / Messages</h2>
+<ul class="nav nav-tabs mb-3" id="messageTabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" data-bs-target="#inbox" data-bs-toggle="tab" id="inbox-tab" role="tab" type="button">📥 الوارد / Inbox</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#sent" data-bs-toggle="tab" id="sent-tab" role="tab" type="button">📤 الصادر / Sent</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#trash" data-bs-toggle="tab" id="trash-tab" role="tab" type="button">🗑️ المحذوف / Trash</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#compose" data-bs-toggle="tab" id="compose-tab" role="tab" type="button">✉️ إرسال / Compose</button>
+</li>
+<li class="nav-item" role="presentation"><button class="nav-link" data-bs-target="#log" data-bs-toggle="tab" id="log-tab" role="tab" type="button">📋 سجل الرسائل / Message Log</button></li></ul>
+<div class="tab-content" id="messageTabsContent">
+<!-- Inbox -->
+<div class="tab-pane fade show active" id="inbox" role="tabpanel">
+<table class="table table-bordered table-striped" id="inboxTable">
+<thead class="table-success">
+<tr>
+<th>من / From</th>
+<th>الفرع / Branch</th>
+<th>الموضوع / Subject</th>
+<th>النوع / Type</th>
+<th>تاريخ الإرسال</th>
+<th>تاريخ الموافقة</th>
+<th>الحالة / Status</th>
+<th>الإجراءات / Actions</th>
+</tr>
+</thead>
+<tbody>
+                    {% for msg in inbox_messages %}
+                    <tr class="{% if msg.SenderRole != 'Employee' %}non-employee{% endif %} {% if msg.Status == 'Unread' %}unread{% endif %}">
+<td>{{ msg.SenderName }} ({{ msg.SenderRole }})</td>
+<td>{{ msg.SenderBranch }}</td>
+<td>{{ msg.Subject }}</td>
+<td>{{ msg.Type }}</td>
+<td>{{ msg.DateSent }}</td>
+<td>{{ msg.DateApproved or '-' }}</td>
+<td>{{ msg.Status }}</td>
+<td>
+<a class="btn btn-sm btn-primary" href="/view_message/{{ msg.ID }}">📖 عرض</a>
+                            {% if msg.RequiresApproval == 'Yes' and (msg.DateApproved == '' or msg.DateApproved == None or msg.DateApproved == '-') %}
+                               <a class="btn btn-sm btn-success" href="/approve_message/{{ msg.ID }}">✔️ موافقة</a>
+<a class="btn btn-sm btn-danger" href="/reject_message/{{ msg.ID }}">❌ رفض</a>
+                            {% endif %}
+                            <a class="btn btn-sm btn-secondary" href="/reply/{{ msg.ID }}">↩️ رد</a>
+<a class="btn btn-warning" href="/forward/{{ msg.ID }}">🔁 إعادة توجيه</a>
+<a class="btn btn-sm btn-outline-danger" href="/delete_message/{{ msg.ID }}">🗑️ حذف</a>
+</td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+<!-- Sent -->
+<div class="tab-pane fade" id="sent" role="tabpanel">
+<table class="table table-bordered table-striped" id="sentTable">
+<thead class="table-primary">
+<tr>
+<th>إلى / To</th>
+<th>الفرع / Branch</th>
+<th>الموضوع / Subject</th>
+<th>النوع / Type</th>
+<th>تاريخ الإرسال</th>
+<th>تاريخ الموافقة</th>
+<th>الحالة</th>
+<th>الإجراءات</th>
+</tr>
+</thead>
+<tbody>
+                    {% for msg in sent_messages %}
+                    <tr>
+<td>{{ msg.ReceiverName }} ({{ msg.ReceiverRole }})</td>
+<td>{{ msg.ReceiverBranch }}</td>
+<td>{{ msg.Subject }}</td>
+<td>{{ msg.Type }}</td>
+<td>{{ msg.DateSent }}</td>
+<td>{{ msg.DateApproved or '-' }}</td>
+<td>{{ msg.Status }}</td>
+<td>
+<a class="btn btn-sm btn-primary" href="/view_message/{{ msg.ID }}">📖 عرض</a>
+</td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+<!-- Trash -->
+<div class="tab-pane fade" id="trash" role="tabpanel">
+<table class="table table-bordered table-striped" id="trashTable">
+<thead class="table-danger">
+<tr>
+<th>من</th>
+<th>إلى</th>
+<th>الموضوع</th>
+<th>تاريخ الإرسال</th>
+<th>الحالة</th>
+<th>الإجراءات</th>
+</tr>
+</thead>
+<tbody>
+                    {% for msg in trash_messages %}
+                    <tr>
+<td>{{ msg.SenderName }}</td>
+<td>{{ msg.ReceiverName }}</td>
+<td>{{ msg.Subject }}</td>
+<td>{{ msg.DateSent }}</td>
+<td>{{ msg.Status }}</td>
+<td>
+<a class="btn btn-sm btn-primary" href="/view_message/{{ msg.ID }}">📖 عرض</a>
+<a class="btn btn-sm btn-danger" href="/delete_permanently/{{ msg.ID }}">🗑️ حذف نهائي</a>
+</td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+<!-- Compose -->
+<div class="tab-pane fade" id="compose" role="tabpanel">
+<form action="/send_message" method="POST">
+                {% if compose_mode == 'reply' %}
+                    <input name="replied_to" type="hidden" value="{{ replied_to }}"/>
+                {% elif compose_mode == 'forward' %}
+                    <input name="forward_from" type="hidden" value="{{ forwarded_from }}"/>
+                {% endif %}
+
+                <div class="row mb-3">
+<div class="col-md-4">
+<label>الفرع:</label>
+<select class="form-select" id="branchSelect">
+<option value="">اختر فرعًا</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch }}">{{ branch }}</option>
+                            {% endfor %}
+                        </select>
+</div>
+<div class="col-md-4">
+<label>الدور:</label>
+<select class="form-select" disabled="" id="roleSelect">
+<option value="">اختر دورًا</option>
+</select>
+</div>
+<div class="col-md-4">
+<label>الاسم:</label>
+<select class="form-select" disabled="" id="nameSelect" multiple="" name="receiver_ids">
+<option value="">اختر اسمًا</option>
+</select>
+</div>
+</div>
+<input id="receiverNameHidden" name="receiver_name" type="hidden"/>
+<input id="receiverBranchHidden" name="receiver_branch" type="hidden"/>
+<input id="receiverRoleHidden" name="receiver_role" type="hidden"/>
+<div class="mb-3">
+<label>نوع الرسالة:</label>
+<select class="form-select" name="type" required="">
+<option value="Normal">عادية</option>
+<option value="ContractRenewal">طلب تجديد عقد</option>
+<option value="TransferRequest">طلب نقل موظف</option>
+<option value="ViolationExplanation">طلب تفسير مخالفة</option>
+<option value="Other">أخرى</option>
+</select>
+</div>
+<div class="mb-3">
+<label>الموضوع:</label>
+<input class="form-control" name="subject" required="" type="text" value="{{ subject or '' }}"/>
+</div>
+<div class="mb-3">
+<label>المحتوى:</label>
+<textarea class="form-control" name="content" required="" rows="4">{{ content or '' }}</textarea>
+</div>
+<button class="btn btn-success" type="submit">✉️ إرسال</button>
+</form>
+</div>
+<div class="tab-pane fade" id="log" role="tabpanel">
+<table class="table table-bordered table-striped" id="logTable">
+<thead class="table-dark">
+<tr>
+<th>المرسل / Sender</th>
+<th>المستلم / Receiver</th>
+<th>الموضوع / Subject</th>
+<th>النوع / Type</th>
+<th>التاريخ / Date</th>
+<th>الحالة / Status</th>
+<th>حالة الحذف / Delete Status</th>
+</tr>
+</thead>
+<tbody>
+        {% for msg in all_messages %}
+        <tr>
+<td>{{ msg.SenderName }} ({{ msg.SenderRole }})</td>
+<td>{{ msg.ReceiverName }} ({{ msg.ReceiverRole }})</td>
+<td>{{ msg.Subject }}</td>
+<td>{{ msg.Type }}</td>
+<td>{{ msg.DateSent }}</td>
+<td>{{ msg.Status }}</td>
+<td>{{ msg.DeleteStatus }}</td>
+</tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#inboxTable, #sentTable, #trashTable, #logTable').DataTable({ "pageLength": 5 });
+
+        const allEmployees = {{ employees_json|safe }};
+
+        $('#branchSelect').on('change', function () {
+            const branch = $(this).val();
+            const roles = [...new Set(allEmployees.filter(emp => emp['الفرع'] === branch).map(emp => emp['الدور']))];
+
+            $('#roleSelect').html('<option value="">اختر دورًا</option>');
+            $('#nameSelect').html('<option value="">اختر اسمًا</option>').prop('disabled', true);
+            $('#receiverNameHidden, #receiverBranchHidden, #receiverRoleHidden').val("");
+
+            roles.forEach(role => {
+                $('#roleSelect').append(`<option value="${role}">${role}</option>`);
+            });
+            $('#roleSelect').prop('disabled', false);
+        });
+
+        $('#roleSelect').on('change', function () {
+            const branch = $('#branchSelect').val();
+            const role = $(this).val();
+            const filtered = allEmployees.filter(emp => emp['الفرع'] === branch && emp['الدور'] === role);
+
+            $('#nameSelect').html('<option value="">اختر اسمًا</option>');
+            filtered.forEach(emp => {
+                $('#nameSelect').append(`<option value="${emp['رقم الهوية']}">${emp['الاسم']}</option>`);
+            });
+            $('#nameSelect').prop('disabled', false);
+        });
+
+        $('#nameSelect').on('change', function () {
+            const id = $(this).val();
+            const emp = allEmployees.find(e => e['رقم الهوية'] == id);
+            if (emp) {
+                $('#receiverNameHidden').val(emp['الاسم']);
+                $('#receiverBranchHidden').val(emp['الفرع']);
+                $('#receiverRoleHidden').val(emp['الدور']);
+            }
+        });
+
+        // ✅ فتح تبويب "إرسال" تلقائيًا
+        const composeMode = "{{ compose_mode | default('') }}";
+        if (composeMode === "reply" || composeMode === "forward") {
+            const composeTab = new bootstrap.Tab(document.querySelector('#compose-tab'));
+            composeTab.show();
+        }
+
+        // ✅ فقط في حالة الرد، املأ بيانات المستقبل تلقائيًا
+        if (composeMode === "reply") {
+            const receiverId = "{{ receiver_id or '' }}";
+            const receiverName = "{{ receiver_name or '' }}";
+            const receiverBranch = "{{ receiver_branch or '' }}";
+            const receiverRole = "{{ receiver_role or '' }}";
+
+            $('#receiverNameHidden').val(receiverName);
+            $('#receiverBranchHidden').val(receiverBranch);
+            $('#receiverRoleHidden').val(receiverRole);
+
+            $('#nameSelect').append(`<option value="${receiverId}" selected>${receiverName}</option>`);
+            $('#nameSelect').prop('disabled', false);
+
+            $('#roleSelect').append(`<option value="${receiverRole}" selected>${receiverRole}</option>`);
+            $('#roleSelect').prop('disabled', false);
+
+            $('#branchSelect').append(`<option value="${receiverBranch}" selected>${receiverBranch}</option>`);
+            $('#branchSelect').prop('disabled', false);
+        }
+    });
+</script>
+</body>
+</html>

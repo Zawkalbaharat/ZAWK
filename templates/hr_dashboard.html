@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة الموارد البشرية / HR Dashboard</title>
+    <style>
+        body {
+            font-family: "Cairo", sans-serif;
+            background-color: #fff;
+            padding: 20px;
+        }
+        h2 {
+            color: #2e7d32;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            margin: 5px 5px 20px 0;
+        }
+        .approve { background-color: #2e7d32; }
+        .reject { background-color: #c62828; }
+        .export { background-color: #2196F3; }
+        .print  { background-color: #FF9800; }
+        .logout { background-color: #777; }
+
+        .status {
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        .status-approved-final { background-color: #006400; color: white; }
+        .status-approved        { background-color: #2196F3; color: white; }
+        .status-pending         { background-color: #FFEB3B; color: black; }
+        .status-rejected        { background-color: #f44336; color: white; }
+    </style>
+
+<!-- ✅ DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+
+<body>
+    <h2>طلبات بانتظار موافقة الموارد البشرية / Pending HR Approval</h2>
+<a href="/employee_status" class="btn unified-btn btn-employee-status">📋 إدارة بيانات الموظفين / Employee Status</a>
+<a href="/hr_tasks" class="btn unified-btn btn-task">🗂️ مهام الموارد البشرية</a>
+<a href="/attendance" class="btn unified-btn btn-attendance">🕒 إدارة حضور الموظفين</a>
+
+<style>
+/* قاعدة موحدة لجميع الأزرار */
+.unified-btn {
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+    display: inline-block;
+    margin: 10px 8px 10px 0;
+    transition: background-color 0.3s ease;
+}
+
+/* زر إدارة بيانات الموظفين */
+.btn-employee-status {
+    background-color: #00695c;
+}
+.btn-employee-status:hover {
+    background-color: #004d40;
+}
+
+/* زر مهام الموارد البشرية */
+.btn-task {
+    background-color: #8e44ad;
+}
+.btn-task:hover {
+    background-color: #732d91;
+}
+/* ✅ زر إدارة الحضور */
+.btn-attendance {
+    background-color: #2980b9;
+}
+.btn-attendance:hover {
+    background-color: #1c5d8b;
+}
+</style>
+
+
+    <!-- زر الرسائل الثابت -->
+<div style="position: fixed; top: 20px; left: 20px; z-index: 9999;">
+    <a href="/messages" style="text-decoration: none;">
+        <button id="messageBtn" style="background-color: {% if unread_count >= 5 %}#c62828{% elif unread_count > 0 %}#fbc02d{% else %}#4caf50{% endif %};
+                                       color: white;
+                                       font-weight: bold;
+                                       border: none;
+                                       padding: 10px 20px;
+                                       border-radius: 8px;
+                                       font-size: 16px;
+                                       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            📨 رسائل / Messages
+            {% if unread_count > 0 %}
+                <span style="background: white; color: black; font-size: 14px; padding: 3px 8px; border-radius: 50%; margin-right: 5px;">
+                    {{ unread_count }}
+                </span>
+            {% endif %}
+        </button>
+    </a>
+</div>
+<!-- زر تقييم الموظفين -->
+<style>
+.fixed-evaluation-btn {
+  position: fixed;
+  left: 20px;
+  top: 90px;
+  z-index: 9999;
+}
+
+.fixed-evaluation-btn .btn {
+  border-radius: 30px;
+  padding: 8px 16px;
+  font-size: 14px;
+  background-color: #ffffff;
+  border: 2px solid #198754;
+  color: #198754;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fixed-evaluation-btn .btn:hover {
+  background-color: #198754;
+  color: white;
+}
+</style>
+
+<div class="fixed-evaluation-btn">
+  <a href="/evaluations" style="text-decoration: none;">
+    <button class="btn">
+      <i class="fas fa-chart-line"></i> 📝 تقييم الموظفين / Evaluations
+    </button>
+  </a>
+</div>
+
+  <div style="
+    margin: 10px 0 20px;
+    padding: 10px;
+    background-color: white;
+    border: 1px solid {{ '#ccc' if vacation_notify_count == 0 else '#f44336' }};
+    border-radius: 8px;
+    color: {{ '#777' if vacation_notify_count == 0 else '#c62828' }};
+    font-weight: bold;
+">
+    📢 يوجد <span style="color: black;">{{ vacation_notify_count }}</span> طلب إجازة بانتظار إشعار الموارد /
+    <span style="color: black;">{{ vacation_notify_count }}</span> Vacation return(s) pending HR notification
+</div>
+
+  <!-- زر ملف الموظفين -->
+<a href="/manage_employees" style="text-decoration: none;">
+  <button class="btn" style="border: 2px solid #198754; background-color: #ffffff; color: #198754;">
+    <i class="fas fa-users"></i> 👥 ملف الموظفين / Employee File
+  </button>
+</a>
+
+    <a href="/hr_vacation">
+    <button style="padding: 10px 20px; background-color: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        🗂️ إدارة مباشرة الإجازات / Vacation Return Management
+    </button>
+</a>
+<a href="/two_year_decisions" style="text-decoration: none;">
+  <button style="background-color: {% if reject_count > 0 %}#c62828{% else %}#2e7d32{% endif %}; 
+                  color: white; 
+                  padding: 10px 15px; 
+                  border: none; 
+                  border-radius: 6px; 
+                  font-weight: bold; 
+                  position: relative; 
+                  margin-right: 10px;">
+    موافقات تأجيل الإجازة / Leave Postponement
+    {% if reject_count > 0 %}
+      <span style="position: absolute; top: -10px; right: -10px; background: yellow; color: black; font-size: 14px; padding: 3px 8px; border-radius: 50%;">
+        {{ reject_count }}
+      </span>
+    {% endif %}
+  </button>
+</a>
+<a href="/employee_view">
+    <button style="margin-bottom: 10px; background-color:#4caf50; color:white; border:none; padding:8px 16px; border-radius:6px;">
+        👤 الدخول كموظف
+    </button>
+</a>
+
+    <a href="/logout"><button class="logout">تسجيل الخروج / Logout</button></a>
+ <!-- ✅ نموذج الموافقة الجماعية بالفلترة (للموارد بنفس زر المشرف العام تمامًا) -->
+<div style="margin: 15px 0; padding: 15px; border: 2px dashed #2e7d32; border-radius: 12px;">
+    <form method="POST" action="/bulk_approval_by_filter" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+        <select name="branch" required>
+            <option value="">🏢 اختر الفرع</option>
+            <option value="الرياض">الرياض</option>
+            <option value="جدة">جدة</option>
+            <option value="الدمام">الدمام</option>
+            <!-- أضف المزيد من الفروع هنا -->
+        </select>
+        <input type="date" name="start_date" required>
+        <input type="date" name="end_date" required>
+        <select name="request_type">
+            <option value="">🔎 نوع الطلب (اختياري)</option>
+            <option value="إجازة">إجازة</option>
+            <option value="استئذان">استئذان</option>
+            <option value="أجر عمل إضافي">أجر عمل إضافي</option>
+            <option value="خصم">خصم</option>
+        </select>
+        <button type="submit" name="action" value="approve" class="approve">✔ موافقة جماعية</button>
+        <button type="submit" name="action" value="reject" class="reject">✖ رفض جماعي</button>
+    </form>
+</div>
+
+    <table id="pendingTable">
+        <thead>
+            <tr>
+                <th>رقم الطلب<br>Request ID</th>
+                <th>اسم الموظف<br>Employee</th>
+                <th>رقم الهوية<br>ID Number</th>
+                <th>نوع الطلب<br>Request Type</th>
+                <th>تاريخ بداية الإجازة</th>
+                <th>تاريخ نهاية الإجازة</th>
+                <th>تفاصيل<br>Details</th>
+                <th>المقدار (ساعات - مقدار الخصم بالريال)</th>
+                <th>تاريخ الطلب<br>Request Date</th>
+                <th>تاريخ الموافقة الأولى<br>First Approval Date</th>
+                <th>الحالة<br>Status</th>
+                <th>الإجراء<br>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in requests %}
+                <tr>
+                    <td>{{ req['رقم الطلب'] }}</td>
+                    <td>{{ req['اسم الموظف'] }}</td>
+                    <td>{{ req['رقم الهوية'] }}</td>
+                    <td>{{ req['نوع الطلب'] }}</td>
+                    <td>{{ req.get('تاريخ البداية', '-') if req['نوع الطلب'] == 'إجازة' else '-' }}</td>
+                    <td>{{ req.get('تاريخ النهاية', '-') if req['نوع الطلب'] == 'إجازة' else '-' }}</td>
+                    <td>{{ req['تفاصيل'] }}</td>
+                    <td>{{ req['عدد الساعات'] }}</td>
+                    <td>{{ req['تاريخ الطلب'] }}</td>
+                    <td>{{ req['تاريخ الموافقة الأولى'] }}</td>
+                    <td>
+                        <span class="status 
+                            {% if req['الحالة'] == 'مقبول نهائيًا' %}
+                                status-approved-final
+                            {% elif req['الحالة'] == 'مقبول' %}
+                                status-approved
+                            {% elif req['الحالة'] == 'معلق' %}
+                                status-pending
+                            {% elif 'مرفوض' in req['الحالة'] %}
+                                status-rejected
+                            {% endif %}">
+                            {{ req['الحالة'] }}
+                        </span>
+                    </td>
+                    <td>
+                        <form method="POST" action="/hr_action">
+                            <input type="hidden" name="index" value="{{ loop.index0 }}">
+                            <button type="submit" name="action" value="approve" class="approve">✔ موافقة</button>
+                            <button type="submit" name="action" value="reject" class="reject">✖ رفض</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button class="export" onclick="exportTableToExcel('pendingTable', 'Pending_Requests')">📁 تصدير Excel</button>
+    <button class="print" onclick="window.print()">🖨 طباعة</button>
+
+    <!-- ✅ تعديل معرف الجدول السفلي -->
+<h2>الطلبات المعتمدة أو المرفوضة / Approved or Rejected</h2>
+<table id="completedTable2">
+    <thead>
+        <tr>
+            <th>رقم الطلب<br>Request ID</th>
+            <th>اسم الموظف<br>Employee</th>
+            <th>رقم الهوية<br>ID Number</th>
+            <th>نوع الطلب<br>Request Type</th>
+            <th>تاريخ بداية الإجازة</th>
+            <th>تاريخ نهاية الإجازة</th>
+            <th>تفاصيل<br>Details</th>
+            <th>المقدار (ساعات - مقدار الخصم بالريال)</th>
+            <th>تاريخ الطلب<br>Request Date</th>
+            <th>تاريخ الموافقة الأولى<br>First Approval</th>
+            <th>تاريخ الموافقة الثانية<br>HR Approval</th>
+            <th>الحالة<br>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for req in completed_requests %}
+            <tr>
+                <td>{{ req['رقم الطلب'] }}</td>
+                <td>{{ req['اسم الموظف'] }}</td>
+                <td>{{ req['رقم الهوية'] }}</td>
+                <td>{{ req['نوع الطلب'] }}</td>
+                <td>{{ req.get('تاريخ البداية', '-') if req['نوع الطلب'] == 'إجازة' else '-' }}</td>
+                <td>{{ req.get('تاريخ النهاية', '-') if req['نوع الطلب'] == 'إجازة' else '-' }}</td>
+                <td>{{ req['تفاصيل'] }}</td>
+                <td>{{ req['عدد الساعات'] }}</td>
+                <td>{{ req['تاريخ الطلب'] }}</td>
+                <td>{{ req['تاريخ الموافقة الأولى'] }}</td>
+                <td>{{ req['تاريخ الموافقة الثانية'] }}</td>
+                <td>
+                    <span class="status 
+                        {% if req['الحالة'] == 'مقبول نهائيًا' %}
+                            status-approved-final
+                        {% elif 'مرفوض' in req['الحالة'] %}
+                            status-rejected
+                        {% endif %}">
+                        {{ req['الحالة'] }}
+                    </span>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- ✅ تعديل زر التصدير Excel -->
+<button class="export" onclick="exportTableToExcel('completedTable2', 'Completed_Requests')">📁 تصدير Excel</button>
+<button class="print" onclick="window.print()">🖨 طباعة</button>
+
+
+    <script>
+        function exportTableToExcel(tableID, filename = '') {
+            var dataType = 'application/vnd.ms-excel';
+            var table = document.getElementById(tableID);
+            var tableHTML = table.outerHTML.replace(/ /g, '%20');
+            filename = filename ? filename + '.xls' : 'data.xls';
+
+            var downloadLink = document.createElement("a");
+            document.body.appendChild(downloadLink);
+
+            if (navigator.msSaveOrOpenBlob) {
+                var blob = new Blob(['\ufeff', tableHTML], { type: dataType });
+                navigator.msSaveOrOpenBlob(blob, filename);
+            } else {
+                downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+                downloadLink.download = filename;
+                downloadLink.click();
+            }
+        }
+    </script>
+
+<!-- ✅ jQuery and DataTables -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#pendingTable').DataTable({
+            "order": [[5, "desc"]],
+            "pageLength": 50,
+            "language": {
+                "search": "🔍 بحث:",
+                "lengthMenu": "عرض _MENU_ طلب لكل صفحة",
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ طلب",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                },
+                "zeroRecords": "لا توجد نتائج",
+                "infoEmpty": "لا يوجد بيانات لعرضها"
+            }
+        });
+
+        $('#completedTable2').DataTable({
+            "order": [[5, "desc"]],
+            "pageLength": 50,
+            "language": {
+                "search": "🔍 بحث:",
+                "lengthMenu": "عرض _MENU_ طلب لكل صفحة",
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ طلب",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                },
+                "zeroRecords": "لا توجد نتائج",
+                "infoEmpty": "لا يوجد بيانات لعرضها"
+            }
+        });
+    });
+</script>
+</body>
+
+</html>

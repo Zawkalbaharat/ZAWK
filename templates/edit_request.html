@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تعديل الطلب / Edit Request</title>
+    <style>
+        body {
+            font-family: "Cairo", sans-serif;
+            background-color: #f9f9f9;
+            padding: 40px;
+            max-width: 600px;
+            margin: auto;
+            direction: rtl;
+        }
+        h2 {
+            color: #2e7d32;
+            text-align: center;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 15px;
+            display: block;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+        button {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #1b5e20;
+        }
+    </style>
+</head>
+<body>
+    <h2>✏ تعديل الطلب رقم {{ req['رقم الطلب'] }}</h2>
+    <form method="POST">
+        <label>نوع الطلب / Request Type</label>
+        <input type="text" name="نوع الطلب" value="{{ req['نوع الطلب'] }}" required>
+
+        <label>تفاصيل / Details</label>
+        <textarea name="تفاصيل">{{ req['تفاصيل'] }}</textarea>
+
+        <label>تاريخ البداية / Start Date</label>
+        <input type="date" name="تاريخ البداية" value="{{ req['تاريخ البداية'] }}">
+
+        <label>تاريخ النهاية / End Date</label>
+        <input type="date" name="تاريخ النهاية" value="{{ req['تاريخ النهاية'] }}">
+
+        <label>عدد الساعات / Hours</label>
+        <input type="text" name="عدد الساعات" value="{{ req['عدد الساعات'] }}">
+
+        <label>تاريخ التنفيذ / Execution Date</label>
+        <input type="date" name="تاريخ التنفيذ" value="{{ req['تاريخ التنفيذ'] }}">
+
+        <button type="submit">💾 حفظ التعديلات / Save Changes</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!-- ✅ تم التعديل على ألوان الحالات بدقة -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    
+   {% if session['role'] != 'موظف' %}
+  <a href="/dashboard" class="btn btn-outline-secondary mb-3">
+    ← عودة إلى لوحة التحكم / Back to Dashboard
+  </a>
+{% endif %}
+
+
+    <meta charset="UTF-8">
+    <title>تقديم طلب / Submit Request</title>
+    <style>
+        body {
+            font-family: "Cairo", sans-serif;
+            background-color: #fff;
+            padding: 20px;
+        }
+        h2 {
+            color: #2e7d32;
+        }
+        .form-container {
+            background-color: #f1f1f1;
+            padding: 20px;
+            border-radius: 16px;
+            max-width: 600px;
+            margin: auto;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            background-color: #2e7d32;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #256428;
+        }
+
+        /* ✅ ألوان الحالات حسب الطلب */
+        .status {
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-align: center;
+            display: inline-block;
+        }
+        .status-approved-final {
+            background-color: #006400;
+            color: white;
+        }
+        .status-approved {
+            background-color: #2196F3;
+            color: white;
+        }
+        .status-pending {
+            background-color: #FFEB3B;
+            color: black;
+        }
+        .status-rejected {
+            background-color: #f44336;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+
+<!-- ✅ DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+
+<body>
+    <!-- زر الرسائل الثابت -->
+<div style="position: fixed; top: 20px; left: 20px; z-index: 9999;">
+    <a href="/messages" style="text-decoration: none;">
+        <button id="messageBtn" style="background-color: {% if unread_count >= 5 %}#c62828{% elif unread_count > 0 %}#fbc02d{% else %}#4caf50{% endif %};
+                                       color: white;
+                                       font-weight: bold;
+                                       border: none;
+                                       padding: 10px 20px;
+                                       border-radius: 8px;
+                                       font-size: 16px;
+                                       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            📨 رسائل / Messages
+            {% if unread_count > 0 %}
+                <span style="background: white; color: black; font-size: 14px; padding: 3px 8px; border-radius: 50%; margin-right: 5px;">
+                    {{ unread_count }}
+                </span>
+            {% endif %}
+        </button>
+    </a>
+</div>
+<!-- زر تقييم الموظف -->
+<div style="position: fixed; left: 20px; top: 140px; z-index: 9999;">
+  <a href="/evaluations" style="text-decoration: none;">
+    <button class="btn d-flex align-items-center shadow-sm"
+            style="border-radius: 30px; padding: 8px 14px; font-size: 14px;
+                   background-color: white;
+                   border: 2px solid {% if has_eval %}#dc3545{% else %}#6c757d{% endif %};
+                   color: {% if has_eval %}#dc3545{% else %}#6c757d{% endif %};">
+      📝 تقييمي / My Evaluation
+    </button>
+  </a>
+</div>
+
+    <h2>تقديم طلب / Submit Request</h2>
+{% if eligibility_days > 365 and not already_decided %}
+<div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+    <h3 style="margin-bottom: 10px;">⚠️ تنبيه هام / Important Notice</h3>
+    <p style="font-size: 16px;">
+        لقد تجاوزت مدة استحقاقك للإجازة سنة كاملة.<br>
+        حسب سياسة الشركة، يمكن تحويل إجازتك إلى نظام كل سنتين.<br>
+        يرجى تحديد قرارك أدناه:
+        <br><br>
+        Your leave eligibility period has exceeded one year.<br>
+        According to company policy, your leave can be postponed to every two years.<br>
+        Please choose your decision below:
+    </p>
+
+    <form method="POST" action="/confirm_two_year_leave">
+        <input type="hidden" name="id_number" value="{{ session['id'] }}">
+        <input type="hidden" name="name" value="{{ session['name'] }}">
+        <input type="hidden" name="branch" value="{{ session['branch'] }}">
+        <input type="hidden" name="eligibility_days" value="{{ eligibility_days }}">
+
+        <button type="submit" name="decision" value="موافق / I Agree" style="background-color: #28a745; color: white; padding: 8px 18px; margin-top: 10px; margin-right: 5px; border: none; border-radius: 5px;">✅ أوافق / I Agree</button>
+
+        <button type="submit" name="decision" value="لا أوافق / I Disagree" style="background-color: #dc3545; color: white; padding: 8px 18px; margin-top: 10px; border: none; border-radius: 5px;">❌ لا أوافق / I Disagree</button>
+    </form>
+</div>
+{% endif %}
+{% if session['role'] in ['مدير', 'موارد بشرية', 'مشرف عام'] %}
+<a href="/dashboard">
+    <button style="margin-top: 10px; background-color:#607d8b; color:white; border:none; padding:8px 16px; border-radius:6px;">
+        ← العودة للوحة التحكم
+    </button>
+</a>
+{% endif %}
+
+    <a href="/logout">
+        <button>تسجيل الخروج / Logout</button>
+    </a>
+
+    <h3>مرحبًا، {{ name }}! / Hello, {{ name }}!</h3>
+    <h4>رقم الهوية: {{ session['id'] }}</h4>
+
+    <div class="form-container">
+        <form action="/submit_request" method="POST">
+            <label for="request_type">نوع الطلب / Request Type:</label>
+            <select id="request_type" name="request_type" onchange="toggleFields()" required>
+                <option value="">اختر / Select</option>
+                <option value="إجازة">إجازة / Vacation</option>
+                <option value="استئذان">استئذان / Permission</option>
+                <option value="أجر عمل إضافي">أجر عمل إضافي / Overtime</option>
+                <option value="أخرى">أخرى / Other</option>
+            </select>
+
+            <div id="vacation_fields" class="hidden">
+                <label>تاريخ بداية الإجازة / Vacation Start Date:</label>
+                <input type="date" name="vacation_start">
+                <label>تاريخ نهاية الإجازة / Vacation End Date:</label>
+                <input type="date" name="vacation_end">
+            </div>
+
+            <div id="permission_fields" class="hidden">
+                <label>تاريخ الاستئذان / Permission Date:</label>
+                <input type="date" name="permission_date">
+                <label>عدد ساعات الاستئذان / Permission Hours:</label>
+                <input type="number" name="permission_hours" min="1">
+            </div>
+
+            <div id="overtime_fields" class="hidden">
+                <label>تاريخ العمل الإضافي / Overtime Date:</label>
+                <input type="date" name="overtime_date">
+                <label>عدد ساعات العمل الإضافي / Overtime Hours:</label>
+                <input type="number" name="overtime_hours" min="1">
+            </div>
+
+            <label for="details">تفاصيل إضافية / Additional Details:</label>
+            <textarea name="details" rows="4" placeholder="اكتب ملاحظات / Add comments..."></textarea>
+
+            <button type="submit">إرسال الطلب / Submit Request</button>
+        </form>
+    </div>
+
+    <h3>طلباتي السابقة / My Previous Requests</h3>
+    <table id="employeeRequestsTable">
+        <thead>
+            <tr>
+                <th>رقم الطلب<br>Request ID</th>
+                <th>نوع الطلب<br>Request Type</th>
+                <th>تفاصيل<br>Details</th>
+                <th>المقدار (ساعات - مقدار الخصم بالريال)</th>
+                <th>تاريخ الطلب<br>Request Date</th>
+                <th>تاريخ الموافقة الأولى<br>First Approval Date</th>
+                <th>تاريخ الموافقة الثانية<br>Second Approval Date</th>
+                <th>الحالة<br>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in my_requests %}
+                <tr>
+                    <td>{{ req['رقم الطلب'] }}</td>
+                    <td>{{ req['نوع الطلب'] }}</td>
+                    <td>{{ req['تفاصيل'] }}</td>
+                    <td>{{ req['عدد الساعات'] }}</td>
+                    <td>{{ req['تاريخ الطلب'] }}</td>
+                    <td>{{ req['تاريخ الموافقة الأولى'] }}</td>
+                    <td>{{ req['تاريخ الموافقة الثانية'] }}</td>
+                    <td>
+                        <span class="status 
+                            {% if req['الحالة'] == 'مقبول نهائيًا' %}
+                                status-approved-final
+                            {% elif req['الحالة'] == 'مقبول' %}
+                                status-approved
+                            {% elif req['الحالة'] == 'معلق' %}
+                                status-pending
+                            {% elif 'مرفوض' in req['الحالة'] %}
+                                status-rejected
+                            {% endif %}
+                        ">
+                            {{ req['الحالة'] }}
+                        </span>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        function toggleFields() {
+            const type = document.getElementById("request_type").value;
+
+            document.getElementById("vacation_fields").classList.add("hidden");
+            document.getElementById("permission_fields").classList.add("hidden");
+            document.getElementById("overtime_fields").classList.add("hidden");
+
+            if (type === "إجازة") {
+                document.getElementById("vacation_fields").classList.remove("hidden");
+            } else if (type === "استئذان") {
+                document.getElementById("permission_fields").classList.remove("hidden");
+            } else if (type === "أجر عمل إضافي") {
+                document.getElementById("overtime_fields").classList.remove("hidden");
+            }
+        }
+    </script>
+
+<!-- ✅ jQuery and DataTables -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function() {
+
+        $('#employeeRequestsTable').DataTable({
+            "order": [[3, "desc"]],
+            "pageLength": 50,
+            "language": {
+                "search": "🔍 بحث:",
+                "lengthMenu": "عرض _MENU_ طلب لكل صفحة",
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ طلب",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                },
+                "zeroRecords": "لا توجد نتائج",
+                "infoEmpty": "لا يوجد بيانات لعرضها"
+            }
+        });
+    });
+</script>
+<script>
+    document.querySelector("form").addEventListener("submit", function(event) {
+        const type = document.getElementById("request_type").value;
+        const details = document.querySelector("textarea[name='details']").value.trim();
+
+        if (type === "إجازة") {
+            const start = document.querySelector("input[name='vacation_start']").value;
+            const end = document.querySelector("input[name='vacation_end']").value;
+            if (!start || !end) {
+                alert("يرجى إدخال تاريخ بداية ونهاية الإجازة.");
+                event.preventDefault();
+            }
+        } else if (type === "استئذان") {
+            const date = document.querySelector("input[name='permission_date']").value;
+            const hours = document.querySelector("input[name='permission_hours']").value;
+            if (!date || !hours) {
+                alert("يرجى إدخال تاريخ وعدد ساعات الاستئذان.");
+                event.preventDefault();
+            }
+        } else if (type === "أجر عمل إضافي") {
+            const date = document.querySelector("input[name='overtime_date']").value;
+            const hours = document.querySelector("input[name='overtime_hours']").value;
+            if (!date || !hours) {
+                alert("يرجى إدخال تاريخ وعدد ساعات العمل الإضافي.");
+                event.preventDefault();
+            }
+        } else if (type === "خصم") {
+            const amount = document.querySelector("input[name='deduction_amount']")?.value;
+            if (!amount || details === "") {
+                alert("يرجى إدخال مقدار الخصم وسبب الخصم.");
+                event.preventDefault();
+            }
+        }
+    });
+</script>
+
+</body>
+
+</html>

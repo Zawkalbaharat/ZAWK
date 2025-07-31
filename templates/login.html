@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تسجيل الدخول - نظام ذوق البهارات</title>
+    <style>
+        body {
+            background-color: #f0f4f1;
+            font-family: 'Tahoma', sans-serif;
+            text-align: center;
+            padding-top: 80px;
+        }
+        .card {
+            background: white;
+            margin: auto;
+            padding: 40px;
+            width: 380px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2e6f4f;
+        }
+        input, textarea {
+            width: 90%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #2e6f4f;
+            color: white;
+            padding: 10px 30px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .logo {
+            width: 100px;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        /* ✅ تنسيق نموذج استعادة كلمة المرور */
+        .reset-form {
+            margin-top: 30px;
+        }
+        .reset-form input {
+            width: 90%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .reset-form button {
+            background-color: #00695c;
+            color: white;
+            padding: 8px 25px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .reset-form button:hover {
+            background-color: #004d40;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="{{ url_for('static', filename='logo.png') }}" class="logo">
+        <h2>تسجيل الدخول</h2>
+
+        <!-- نموذج تسجيل الدخول -->
+        <form method="post">
+            <input type="text" name="id_number" placeholder="رقم الهوية" required><br>
+            <input type="password" name="password" placeholder="كلمة المرور" required><br>
+            <button type="submit">دخول</button>
+        </form>
+
+        <!-- ✅ نموذج إرسال رابط استعادة كلمة المرور -->
+        <form action="/send_reset_link" method="POST" class="reset-form">
+            <input type="email" name="email" placeholder="📧 بريدك الإلكتروني لاستعادة كلمة المرور" required><br>
+            <button type="submit">🔄 أرسل رابط تغيير كلمة المرور</button>
+        </form>
+
+        {% if error %}
+            <div class="error-message">{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>

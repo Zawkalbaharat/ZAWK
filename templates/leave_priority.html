@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>أولوية الإجازات / Leave Priority</title>
+    <style>
+        body {
+            font-family: "Cairo", sans-serif;
+            background-color: #fff;
+            padding: 20px;
+        }
+        h2 {
+            color: #2e7d32;
+            text-align: center;
+        }
+        .top-badge {
+            text-align: center;
+            font-size: 24px;
+            color: #fff;
+            background-color: #2e7d32;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f1f1f1;
+        }
+        input[type="number"] {
+            width: 60px;
+        }
+        form {
+            margin: 0;
+        }
+        .btn {
+            padding: 5px 10px;
+            border: none;
+            background-color: #2e7d32;
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .back-button {
+            margin-bottom: 15px;
+            display: inline-block;
+            background-color: #888;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<a href="javascript:history.back()" class="back-button">العودة / Back</a>
+
+<h2>أولوية الإجازات / Leave Priority</h2>
+
+{% if session['role'] in ['موارد بشرية', 'مشرف عام'] %}
+<div style="margin-bottom: 20px;">
+    <label>تصفية حسب الفرع:</label>
+    <select id="branchFilter" onchange="filterByBranch()">
+        <option value="">كل الفروع</option>
+        {% set branches = [] %}
+        {% for emp in employees %}
+            {% if emp['الفرع'] not in branches %}
+                <option value="{{ emp['الفرع'] }}">{{ emp['الفرع'] }}</option>
+                {% set _ = branches.append(emp['الفرع']) %}
+            {% endif %}
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
+
+<div class="top-badge" id="topBadge">
+    الموظف الأكثر استحقاً للإجازة: <strong id="topEmployeeName">{{ top_employee_name }}</strong>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>رقم الهوية</th>
+            <th>الاسم</th>
+            <th>الفرع</th>
+            <th>الدور</th>
+            <th>تاريخ آخر إجازة</th>
+            <th>عدد الأيام منذ آخر إجازة</th>
+            <th>مدة الاستحقاق (بأيام)</th>
+            {% if session['role'] != 'موظف' %}
+            <th>تعديل</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for emp in employees %}
+            {% if session['role'] != 'مدير' or emp['الفرع'] == session['branch'] %}
+            <tr>
+                <td>{{ emp['رقم الهوية'] }}</td>
+                <td>{{ emp['الاسم'] }}</td>
+                <td>{{ emp['الفرع'] }}</td>
+                <td>{{ emp['الدور'] }}</td>
+                <td>{{ emp['تاريخ آخر إجازة'] or '-' }}</td>
+                <td>{{ emp['عدد الأيام منذ الإجازة الأخيرة']|int }}</td>
+                <td>{{ emp['مدة الاستحقاق']|int }}</td>
+                {% if session['role'] != 'موظف' %}
+                <td>
+                    <form method="POST" action="/update_entitlement">
+                        <input type="hidden" name="id_number" value="{{ emp['رقم الهوية'] }}">
+                        <input type="number" name="new_entitlement" value="{{ emp['مدة الاستحقاق']|int }}" required>
+                        <button type="submit" class="btn">حفظ</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    function filterByBranch() {
+        var selectedBranch = document.getElementById("branchFilter").value;
+        var rows = document.querySelectorAll("table tbody tr");
+
+        let topName = "";
+        let maxDays = -1;
+
+        rows.forEach(function(row) {
+            var branch = row.children[2].innerText.trim();
+            var daysSinceLeave = parseInt(row.children[5].innerText.trim()) || 0;
+            var name = row.children[1].innerText.trim();
+
+            if (selectedBranch === "" || branch === selectedBranch) {
+                row.style.display = "";
+                if (daysSinceLeave > maxDays) {
+                    maxDays = daysSinceLeave;
+                    topName = name;
+                }
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        document.getElementById("topEmployeeName").innerText = topName || "لا يوجد";
+    }
+</script>
+
+</body>
+</html>

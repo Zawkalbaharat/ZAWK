@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>عرض الرسالة</title>
+    <style>
+        body { font-family: "Cairo", sans-serif; margin: 20px; background: #f8f9fa; }
+        .message-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 15px #ccc; }
+        h2 { color: #2e7d32; }
+        p { font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <div class="message-container">
+        <h2>الموضوع: {{ message.Subject }}</h2>
+        <p><strong>من:</strong> {{ message.SenderName }} ({{ message.SenderRole }})</p>
+        <p><strong>الفرع:</strong> {{ message.SenderBranch }}</p>
+        <p><strong>التاريخ:</strong> {{ message.DateSent }}</p>
+        <hr>
+        <p>{{ message.Content }}</p>
+        <a href="{{ url_for('view_messages') }}">⬅️ العودة إلى الرسائل</a>
+    </div>
+</body>
+</html>

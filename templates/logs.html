@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>🕓 سجل الأحداث / Logs</title>
+    <style>
+        body {
+            font-family: "Cairo", sans-serif;
+            background-color: #fff;
+            padding: 20px;
+        }
+        h2 {
+            color: #2e7d32;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .export { background-color: #2196F3; }
+        .back { background-color: #777; }
+        input {
+            width: 100%;
+            padding: 4px;
+            box-sizing: border-box;
+            font-family: "Cairo", sans-serif;
+        }
+    </style>
+
+    <!-- ✅ DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+<body>
+
+<h2>🕓 سجل الأحداث / Event Logs</h2>
+
+<!-- زر العودة -->
+<a href="/dashboard"><button class="back">🔙 رجوع إلى لوحة المشرف</button></a>
+
+<!-- الجدول -->
+<table id="logsTable">
+    <thead>
+        <tr>
+            <th>الاسم</th>
+            <th>الرقم الوظيفي</th>
+            <th>الدور</th>
+            <th>الفرع</th>
+            <th>الحدث</th>
+            <th>نوع الطلب</th>
+            <th>رقم الطلب</th>
+            <th>التاريخ والوقت</th>
+            <th>IP المستخدم</th>
+        </tr>
+        <!-- ✅ صف فلاتر البحث -->
+        <tr>
+            <th><input type="text" placeholder="🔎 الاسم" /></th>
+            <th><input type="text" placeholder="🔎 الرقم الوظيفي" /></th>
+            <th><input type="text" placeholder="🔎 الدور" /></th>
+            <th><input type="text" placeholder="🔎 الفرع" /></th>
+            <th><input type="text" placeholder="🔎 الحدث" /></th>
+            <th><input type="text" placeholder="🔎 نوع الطلب" /></th>
+            <th><input type="text" placeholder="🔎 رقم الطلب" /></th>
+            <th><input type="text" placeholder="🔎 التاريخ" /></th>
+            <th><input type="text" placeholder="🔎 IP" /></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in logs %}
+        <tr>
+            <td>{{ row['الاسم'] }}</td>
+            <td>{{ row['الرقم الوظيفي'] }}</td>
+            <td>{{ row['الدور'] }}</td>
+            <td>{{ row['الفرع'] }}</td>
+            <td>{{ row['الحدث'] }}</td>
+            <td>{{ row['نوع الطلب'] }}</td>
+            <td>{{ row['رقم الطلب'] }}</td>
+            <td>{{ row['التاريخ والوقت'] }}</td>
+            <td>{{ row['IP المستخدم'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- زر التصدير -->
+<button class="export" onclick="exportTableToExcel('logsTable', 'logs_export')">📁 تصدير Excel</button>
+
+<!-- ✅ Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function() {
+        var table = $('#logsTable').DataTable({
+            "order": [[7, "desc"]],
+            "pageLength": 50,
+            "language": {
+                "search": "🔍 بحث:",
+                "lengthMenu": "عرض _MENU_ سجل لكل صفحة",
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ سجل",
+                "paginate": {
+                    "first": "الأول",
+                    "last": "الأخير",
+                    "next": "التالي",
+                    "previous": "السابق"
+                },
+                "zeroRecords": "لا توجد نتائج",
+                "infoEmpty": "لا يوجد بيانات"
+            }
+        });
+
+        // ✅ فلترة الأعمدة
+        $('#logsTable thead tr:eq(1) th').each(function(i) {
+            $('input', this).on('keyup change', function() {
+                if (table.column(i).search() !== this.value) {
+                    table.column(i).search(this.value).draw();
+                }
+            });
+        });
+    });
+
+    function exportTableToExcel(tableID, filename = '') {
+        var dataType = 'application/vnd.ms-excel';
+        var table = document.getElementById(tableID);
+        var tableHTML = table.outerHTML.replace(/ /g, '%20');
+        filename = filename ? filename + '.xls' : 'logs.xls';
+
+        var downloadLink = document.createElement("a");
+        document.body.appendChild(downloadLink);
+
+        if (navigator.msSaveOrOpenBlob) {
+            var blob = new Blob(['\ufeff', tableHTML], { type: dataType });
+            navigator.msSaveOrOpenBlob(blob, filename);
+        } else {
+            downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+            downloadLink.download = filename;
+            downloadLink.click();
+        }
+    }
+</script>
+
+</body>
+</html>
