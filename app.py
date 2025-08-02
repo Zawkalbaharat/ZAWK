@@ -2394,7 +2394,7 @@ def add_or_update_task():
     try:
         df = pd.read_excel('hr_tasks.xlsx')
     except FileNotFoundError:
-        df = pd.DataFrame(columns=['task_id','task_name','task_details','assigned_by','status','due_date','supervisor_evaluation'])
+        df = pd.DataFrame(columns=['task_id','task_name','task_details','assigned_by','status','due_date','added_date','supervisor_evaluation'])
 
     if action == 'add':
         task_name = request.form['task_name']
@@ -2432,6 +2432,13 @@ def add_or_update_task():
 
         # ✅ تسجيل الحذف
         log_action(session['name'], session['id'], session['role'], session['branch'], 'حذف مهمة', '', str(task_id))
+
+    elif action == 'complete' and session['role'] == 'موارد بشرية':
+        task_id = int(request.form['task_id'])
+        df.loc[df['task_id'] == task_id, 'status'] = 'تمت'
+
+        # ✅ تسجيل الإنجاز
+        log_action(session['name'], session['id'], session['role'], session['branch'], 'إنهاء مهمة', '', str(task_id))
 
     df.to_excel('hr_tasks.xlsx', index=False)
     return redirect('/hr_tasks')
@@ -2679,6 +2686,48 @@ def full_employee_info():
                            selected_branch=selected_branch,
                            selected_id=selected_id,
                            data=filtered_data)
+
+from werkzeug.utils import secure_filename
+
+EXCEL_FOLDER = os.path.dirname(os.path.abspath(__file__))
+
+@app.route('/manage_excels', methods=['GET', 'POST'])
+@log_event(event_name="إدارة ملفات Excel", request_type="إدارة")
+def manage_excels():
+    if 'id' not in session or session['role'] not in ['موارد بشرية', 'مشرف عام']:
+        return redirect('/login')
+
+    # نستخدم المجلد الحالي الذي فيه app.py وملفات Excel/CSV
+    EXCEL_FOLDER = os.path.dirname(os.path.abspath(__file__))
+
+    # جلب كل الملفات .xlsx و .csv
+    all_files = [f for f in os.listdir(EXCEL_FOLDER) if f.endswith(('.xlsx', '.csv'))]
+
+    # فصل bulk في قائمة مستقلة
+    bulk_files = [f for f in all_files if 'bulk' in f.lower()]
+    normal_files = [f for f in all_files if 'bulk' not in f.lower()]
+
+    # ترتيب كل جزء على حدة
+    files = sorted(normal_files) + sorted(bulk_files)
+
+    # التعامل مع رفع ملف
+    if request.method == 'POST':
+        filename = request.form['filename']
+        file = request.files['new_file']
+        if file and filename in files:
+            path = os.path.join(EXCEL_FOLDER, filename)
+            file.save(path)
+            flash(f'✅ تم استبدال الملف {filename} بنجاح')
+        return redirect('/manage_excels')
+
+    return render_template('manage_excels.html', files=files)
+
+@app.route('/download_excel/<filename>')
+def download_excel(filename):
+    if 'id' not in session or session['role'] not in ['موارد بشرية', 'مشرف عام']:
+        return redirect('/login')
+    return send_from_directory(EXCEL_FOLDER, filename, as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>📁 إدارة ملفات Excel</title>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f9f9f9;
+            padding: 30px;
+        }
+
+        h2 {
+            color: #00695c;
+        }
+
+        .warning {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 2px solid #c62828;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .back-btn {
+            background-color: #37474f;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .back-btn:hover {
+            background-color: #263238;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .download {
+            background-color: #1976d2;
+            color: white;
+        }
+
+        .upload {
+            background-color: #388e3c;
+            color: white;
+        }
+
+        .upload:hover, .download:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 🔙 زر العودة -->
+    <a href="/dashboard" class="back-btn">🔙 العودة إلى لوحة التحكم</a>
+
+    <!-- ⚠️ التنبيه -->
+    <div class="warning">
+        ⚠️ رفع أي بيانات في النظام قد يخرب كل البيانات السابقة - الرجاء التنبه
+    </div>
+
+    <h2>📁 إدارة ملفات Excel</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>📄 اسم الملف</th>
+                <th>⬇️ تنزيل</th>
+                <th>⬆️ رفع جديد</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in files %}
+            <tr>
+                <td>{{ file }}</td>
+                <td><a href="{{ url_for('download_excel', filename=file) }}" class="btn download">تحميل</a></td>
+                <td>
+                    <form action="/manage_excels" method="POST" enctype="multipart/form-data" onsubmit="return confirmUpload('{{ file }}', this)">
+                        <input type="hidden" name="filename" value="{{ file }}">
+                        <input type="file" name="new_file" required>
+                       <button type="submit" class="btn upload">رفع</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+<script>
+function confirmUpload(expectedName, formElement) {
+    const fileInput = formElement.querySelector('input[type="file"]');
+    const uploadedFile = fileInput.files[0];
+
+    if (!uploadedFile) {
+        alert("❌ يرجى اختيار ملف قبل الرفع");
+        return false;
+    }
+
+    const uploadedName = uploadedFile.name.trim();
+
+    if (uploadedName !== expectedName.trim()) {
+        alert(`❌ اسم الملف الذي رفعته هو: "${uploadedName}"\nلكن النظام يتوقع: "${expectedName}"\nيرجى رفع الملف الصحيح.`);
+        return false;
+    }
+
+    return confirm("⚠️ تنبيه هام:\nاستبدال هذا الملف قد يؤثر على جميع بيانات النظام.\nهل أنت متأكد أنك تريد المتابعة؟");
+}
+</script>
+
+</body>
+</html>

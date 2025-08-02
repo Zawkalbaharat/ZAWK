@@ -48,6 +48,20 @@
 </div>
 
 <div id="statistics"></div>
+<div style="margin-bottom: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
+  <select id="branchFilter" class="custom-select" style="max-width: 200px;">
+    <option value="">🔍 كل الفروع</option>
+  </select>
+
+  <select id="sponsorFilter" class="custom-select" style="max-width: 200px;">
+    <option value="">🔍 كل رموز الكفالة</option>
+  </select>
+
+  <select id="commercialFilter" class="custom-select" style="max-width: 200px;">
+    <option value="">🔍 كل السجلات التجارية</option>
+  </select>
+</div>
+
 <table id="statusTable" class="display" style="width:100%">
     <thead></thead>
     <tbody></tbody>
@@ -208,13 +222,41 @@ function buildTable(data) {
 $(document).ready(function() {
     const rawData = {{ data | tojson | safe }};
     const role = "{{ role }}";
+
     tableData = rawData.map(row => {
         if (!row["هل يستحق التأمين؟"]) row["هل يستحق التأمين؟"] = "نعم";
         if (!row["هل يستحق البطاقة؟"]) row["هل يستحق البطاقة؟"] = "نعم";
         return row;
     });
+
     if (tableData.length > 0) buildTable(tableData);
 
+    // ✅ كود ربط الفلاتر بالجدول
+    function populateFilter(selectId, columnName) {
+        const uniqueValues = [...new Set(tableData.map(row => row[columnName]).filter(Boolean))];
+        uniqueValues.sort();
+        uniqueValues.forEach(val => {
+            $(`#${selectId}`).append(`<option value="${val}">${val}</option>`);
+        });
+    }
+
+    function setupFilter(selectId, columnTitle) {
+        $(`#${selectId}`).on("change", function () {
+            const value = $(this).val();
+            const colIndex = table.settings().init().columns.findIndex(col => col.title === columnTitle);
+            table.column(colIndex).search(value).draw();
+        });
+    }
+
+    populateFilter("branchFilter", "الفرع");
+    populateFilter("sponsorFilter", "رمز الكفالة");
+    populateFilter("commercialFilter", "سجل تجاري");
+
+    setupFilter("branchFilter", "الفرع");
+    setupFilter("sponsorFilter", "رمز الكفالة");
+    setupFilter("commercialFilter", "سجل تجاري");
+
+    // 🔁 بقية كود التعديل على الخلايا حسب الدور
     if (["موارد بشرية", "مشرف عام"].includes(role)) {
         $('#statusTable tbody').on('click', 'td', function () {
             const colIndex = $(this).index();
@@ -297,6 +339,7 @@ $(document).ready(function() {
         $("#statistics").append(saveButton);
     }
 });
+
 </script>
 <!-- تنسيق النص ليكون في الوسط -->
 <style>
